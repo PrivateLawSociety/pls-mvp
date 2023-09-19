@@ -4,10 +4,6 @@
 	import { ECPair, NETWORK, createMultisig, createTxSpendingFromMultisig } from '$lib/bitcoinjs';
 	import type { ECPairInterface } from 'ecpair';
 
-	// Keys can be generated as such:
-	// ECPair.makeRandom({
-	// 	network: NETWORK
-	// }).toWIF()
 	let wifKeys = [
 		'cPiYkuFSBCewtdoMfAczLmicmdeRFaUTmA3ffzmDzvSK92fQ8DW5',
 		'cS7G2pcTPAY4T2p9xZ1ozAZzjVmPB5W1TopzhYG9LD6MqQpnyCGd',
@@ -77,11 +73,22 @@
 <div class="flex flex-col items-center justify-center w-full gap-4">
 	<!-- <input type="file" bind:files /> -->
 	<h1 class="text-3xl font-bold">**Using bitcoin testnet**</h1>
+	<Button
+		on:click={() =>
+			alert(
+				`Private key: ${ECPair.makeRandom({
+					network: NETWORK
+				}).toWIF()}`
+			)}
+	>
+		Generate private key
+	</Button>
+
 	<h1 class="text-3xl font-bold">Multisig generation</h1>
 	<div class="flex flex-col gap-2">
-		<LabelledInput type="text" label="First party pubkey" bind:value={wifKeys[0]} />
-		<LabelledInput type="text" label="Second party pubkey" bind:value={wifKeys[1]} />
-		<LabelledInput type="text" label="Arbiter pubkey" bind:value={wifKeys[2]} />
+		<LabelledInput type="text" label="First party private key" bind:value={wifKeys[0]} />
+		<LabelledInput type="text" label="Second party private key" bind:value={wifKeys[1]} />
+		<LabelledInput type="text" label="Arbiter private key" bind:value={wifKeys[2]} />
 	</div>
 	<Button on:click={handleGenerate}>Generate</Button>
 
