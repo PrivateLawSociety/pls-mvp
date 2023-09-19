@@ -21,38 +21,37 @@ export function createMultisig(
 	return multisig;
 }
 
-export async function createTxSpendingFromMultisig(
-	multisig: bitcoin.payments.Payment,
-	seckeys: ECPairInterface[],
+export async function startTxSpendingFromMultisig(
+	redeemOutput: string,
+	seckey: ECPairInterface,
 	network: bitcoin.Network,
 	transactionHash: string,
 	transactionHex: string,
 	receivingAddress: string,
-	valueToSend: number
+	amountToSend: number
 ) {
-	// const transaction = await (
-	// 	await fetch(
-	// 		`https://mempool.space/testnet/api/tx/${'transactionHash'}`
-	// 	)
-	// ).json();
-
-	// console.log(transaction);
-
 	const psbt = new bitcoin.Psbt({
 		network: network
 	})
 		.addInput({
 			hash: transactionHash,
 			index: 0,
-			redeemScript: multisig.redeem!.output,
+			redeemScript: Buffer.from(redeemOutput, 'hex'),
 			nonWitnessUtxo: Buffer.from(transactionHex, 'hex')
 		})
 		.addOutput({
 			address: receivingAddress,
-			value: valueToSend
+			value: amountToSend
 		})
-		.signInput(0, seckeys[0])
-		.signInput(0, seckeys[1]);
+		.signInput(0, seckey);
+
+	return psbt.toHex();
+}
+
+export async function finishTxSpendingFromMultisig(psbtHex: string, seckey: ECPairInterface) {
+	const psbt = bitcoin.Psbt.fromHex(psbtHex);
+
+	psbt.signInput(0, seckey);
 
 	psbt.finalizeAllInputs();
 
