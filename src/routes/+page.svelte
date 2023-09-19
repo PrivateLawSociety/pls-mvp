@@ -14,13 +14,13 @@
 
 	let receivingAddress = '2Myd7Cxtxfju6CjxiuooTeyFfieYisx7S7e';
 
-	let amountToSend = 500;
+	let amountToSend = 546 - 338;
 
 	// let files: FileList | undefined;
 
 	// $: if (files) alert(files.item(0)?.name);
 
-	function getEcpairs() {
+	function getPrivateEcpairs() {
 		const ecpairs: ECPairInterface[] = [];
 
 		for (const key of wifKeys) {
@@ -35,8 +35,23 @@
 		return ecpairs;
 	}
 
-	async function handleDoOtherStuff() {
-		const ecpairs = getEcpairs();
+	function getPublicEcpairs() {
+		const ecpairs: ECPairInterface[] = [];
+
+		for (const key of wifKeys) {
+			try {
+				ecpairs.push(ECPair.fromPublicKey(ECPair.fromWIF(key, NETWORK).publicKey));
+			} catch (error) {
+				alert('Some of the keys are invalid');
+				return null;
+			}
+		}
+
+		return ecpairs;
+	}
+
+	async function handleCreateTransaction() {
+		const ecpairs = getPrivateEcpairs();
 
 		if (!ecpairs) return;
 
@@ -53,14 +68,14 @@
 			inputTransactionHash,
 			transactionHex,
 			multisig.address!,
-			546 - 338
+			amountToSend
 		);
 
 		alert(`Generated transaction that can be published to testnet: ${generatedTransactionInHex}`);
 	}
 
 	function handleGenerate() {
-		const ecpairs = getEcpairs();
+		const ecpairs = getPublicEcpairs();
 
 		if (!ecpairs) return;
 
@@ -96,5 +111,5 @@
 	<LabelledInput type="text" label="Input transaction hash" bind:value={inputTransactionHash} />
 	<LabelledInput type="text" label="Output address" bind:value={receivingAddress} />
 	<LabelledInput type="number" label="Amount (remaining is fees)" bind:value={amountToSend} />
-	<Button on:click={handleDoOtherStuff}>Create tx</Button>
+	<Button on:click={handleCreateTransaction}>Create tx</Button>
 </div>
