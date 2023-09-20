@@ -4,6 +4,8 @@ import * as ecc from 'tiny-secp256k1';
 
 export const ECPair = ECPairFactory(ecc);
 
+bitcoin.initEccLib(ecc);
+
 export const NETWORK = bitcoin.networks.testnet;
 
 export function createMultisig(
