@@ -2,9 +2,23 @@ import * as bitcoin from 'bitcoinjs-lib';
 import ECPairFactory, { type ECPairInterface } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 
+export interface UTXO {
+	txid: string;
+	vout: number;
+	status: {
+		confirmed: boolean;
+		block_height: number;
+		block_hash: string;
+		block_time: number;
+	};
+	value: number;
+}
+
 export const ECPair = ECPairFactory(ecc);
 
 bitcoin.initEccLib(ecc);
+
+export const bitcoinjs = bitcoin;
 
 export const NETWORK = bitcoin.networks.testnet;
 
@@ -27,39 +41,46 @@ export async function startTxSpendingFromMultisig(
 	redeemOutput: string,
 	seckey: ECPairInterface,
 	network: bitcoin.Network,
-	transactionHash: string,
-	transactionHex: string,
-	receivingAddress: string,
-	amountToSend: number
+	receivingAddresses: {
+		address: string;
+		amount: number;
+	}[],
+	utxos: UTXO[],
+	transactionsHex: string[]
 ) {
 	const psbt = new bitcoin.Psbt({
 		network: network
-	})
-		.addInput({
-			hash: transactionHash,
-			index: 0,
+	});
+
+	utxos.forEach((utxo, i) => {
+		psbt.addInput({
+			hash: utxo.txid,
+			index: utxo.vout,
 			redeemScript: Buffer.from(redeemOutput, 'hex'),
-			nonWitnessUtxo: Buffer.from(transactionHex, 'hex')
-		})
-		.addOutput({
-			address: receivingAddress,
-			value: amountToSend
-		})
-		.signInput(0, seckey);
+			nonWitnessUtxo: Buffer.from(transactionsHex[i], 'hex')
+		});
+	});
+
+	receivingAddresses.forEach(({ address, amount }) => {
+		psbt.addOutput({
+			address,
+			value: amount
+		});
+	});
+
+	receivingAddresses.forEach((_, i) => {
+		psbt.signInput(i, seckey);
+	});
 
 	return psbt.toHex();
 }
 
-export async function finishTxSpendingFromMultisig(psbtHex: string, seckey: ECPairInterface) {
-	const psbt = bitcoin.Psbt.fromHex(psbtHex);
-
-	psbt.signInput(0, seckey);
+export async function finishTxSpendingFromMultisig(psbt: bitcoin.Psbt, seckey: ECPairInterface) {
+	psbt.txInputs.forEach((_, i) => psbt.signInput(i, seckey));
 
 	psbt.finalizeAllInputs();
 
 	const tx = psbt.extractTransaction();
-
-	console.log(tx.toHex());
 
 	return tx.toHex();
 }
