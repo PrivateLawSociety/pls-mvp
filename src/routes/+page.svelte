@@ -7,6 +7,9 @@
 		<a href="/contract/create">Create contract</a>
 	</Button>
 	<Button>
+		<a href="/contract/verify">Verify contract</a>
+	</Button>
+	<Button>
 		<a href="/multisig/start">Start multisig spend</a>
 	</Button>
 	<Button>

@@ -4,8 +4,8 @@
 	import { ECPair, NETWORK, createMultisig } from '$lib/bitcoinjs';
 	import { broadcastToNostr, makeNostrEvent, nostrNow, nostrSubscribe } from '$lib/nostr';
 	import { nip04 } from 'nostr-tools';
-	import { createHash } from 'crypto';
-	import type { ECPairInterface } from 'ecpair';
+	import { signPartialContract, type PartialContract } from '$lib/pls/contract';
+	import { hashFromFile } from '$lib/utils';
 
 	// coordinator <-- clients
 	interface FirstEventPayload {
@@ -40,10 +40,7 @@
 
 	let collectedBitcoinPubkeys: string[] = [];
 
-	let dataToSign: {
-		pubkeys: string[];
-		fileHash: string;
-	} | null = null;
+	let dataToSign: PartialContract | null = null;
 
 	let collectedSignatures: Record<string, string> = {};
 
@@ -56,12 +53,9 @@
 		const file = myFiles?.item(0);
 
 		if (file)
-			file
-				.arrayBuffer()
-				.then(
-					(buffer) =>
-						(myFileHash = createHash('sha256').update(new Uint8Array(buffer)).digest('hex'))
-				);
+			hashFromFile(file).then((hash) => {
+				myFileHash = hash.toString('hex');
+			});
 	}
 
 	function BitcoinToNostrPubkey(bitcoinPubkey: string) {
@@ -116,8 +110,8 @@
 			) as SecondEventPayload;
 
 			dataToSign = {
-				pubkeys: pubkeys,
-				fileHash: myFileHash
+				fileHash: myFileHash,
+				pubkeys: pubkeys
 			};
 		});
 
@@ -212,10 +206,10 @@
 			collectedSignatures[bitcoinPubkey] = signature;
 
 			if (Object.values(collectedSignatures).length === collectedBitcoinPubkeys.length) {
-				const mySignature = signData(myKeypair, {
-					pubkeys: multisigPubkeys,
-					fileHash: myFileHash
-				});
+				const mySignature = signPartialContract(myKeypair, {
+					fileHash: myFileHash,
+					pubkeys: multisigPubkeys
+				}).toString('hex');
 
 				const finalStuff = {
 					fileHash: myFileHash,
@@ -233,23 +227,13 @@
 		alreadyStartedMultisig = true;
 	}
 
-	function signData(keypair: ECPairInterface, data: typeof dataToSign) {
-		return keypair
-			.sign(
-				createHash('sha256')
-					.update(new Uint8Array(Buffer.from(JSON.stringify(data))))
-					.digest()
-			)
-			.toString('hex');
-	}
-
 	async function handleApprove() {
 		const myKeypair = ECPair.fromWIF(wifKey, NETWORK);
 		const myPrivkey = myKeypair.privateKey?.toString('hex');
 
 		if (!dataToSign || !myPrivkey) return;
 
-		const signature = signData(myKeypair, dataToSign);
+		const signature = signPartialContract(myKeypair, dataToSign).toString('hex');
 
 		const encryptedText = await nip04.encrypt(
 			myPrivkey,

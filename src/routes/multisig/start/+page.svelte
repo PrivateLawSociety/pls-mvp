@@ -2,21 +2,14 @@
 	import { ECPair, NETWORK, startTxSpendingFromMultisig, type UTXO } from '$lib/bitcoinjs';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
-
-	interface ContractData {
-		// fileHash: string;
-		redeemOutput: string;
-		multisigAddress: string;
-		// pubkeys: string;
-		// signatures: Record<string, string>;
-	}
+	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
 
 	let wifKey = '';
 
 	let utxos: UTXO[] | null = null;
 	let transactionsHex: string[] | null = null;
 
-	let contractData: ContractData | null = null;
+	let contractData: FinishedContractData | null = null;
 
 	let myFiles: FileList | undefined;
 
@@ -56,20 +49,9 @@
 	}
 
 	async function onFileSelected(file: File) {
-		// if (!file) return alert('Select a file first!');
+		contractData = tryParseFinishedContract(await file.text());
 
-		const maybecontractData = tryParseJSON<ContractData>(await file.text());
-
-		if (
-			!maybecontractData ||
-			!maybecontractData.multisigAddress ||
-			!maybecontractData.redeemOutput
-		) {
-			contractData = null;
-			return alert('File has an invalid format');
-		}
-
-		contractData = maybecontractData;
+		if (!contractData) return alert('File has an invalid format');
 
 		utxos = await (
 			await fetch(`https://mempool.space/testnet/api/address/${contractData.multisigAddress}/utxo`)
@@ -86,14 +68,6 @@
 		// ).json();
 
 		// feeAmount = fees.economyFee;
-	}
-
-	function tryParseJSON<T>(json: string) {
-		try {
-			return JSON.parse(json) as T;
-		} catch (error) {
-			return null;
-		}
 	}
 
 	async function handleStartSpend() {
