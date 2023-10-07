@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { ECPair, NETWORK, createMultisig } from '$lib/bitcoinjs';
 	import Button from '$lib/components/Button.svelte';
-	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { broadcastToNostr, makeNostrEvent, nostrNow, nostrSubscribe } from '$lib/nostr';
 	import { nip04 } from 'nostr-tools';
 	import {
@@ -13,18 +12,27 @@
 		type ThirdEventPayload,
 		ThirdEvent
 	} from './shared';
-	import { signPartialContract } from '$lib/pls/contract';
+	import { signPartialContract, type FinishedContractData } from '$lib/pls/contract';
 
 	export let myFileHash: string;
 	export let wifKey: string;
+	export let coordinationStarted: boolean;
+
+	let alreadyStartedMultisig = false;
 
 	let publicKey = '';
 
 	let collectedBitcoinPubkeys: string[] = [];
 	let collectedSignatures: Record<string, string> = {};
 
-	let alreadyStartedMultisig = false;
-	let coordinationStarted = false;
+	let finishedContract: FinishedContractData | null = null;
+
+	$: {
+		try {
+			const ecpair = ECPair.fromWIF(wifKey, NETWORK);
+			publicKey = ecpair.publicKey.toString('hex');
+		} catch (error) {}
+	}
 
 	async function handleStartCoordination() {
 		const myPrivKey = ECPair.fromWIF(wifKey, NETWORK)?.privateKey?.toString('hex');
@@ -119,37 +127,57 @@
 					pubkeys: multisigPubkeys
 				}).toString('hex');
 
-				const finalStuff = {
+				finishedContract = {
 					fileHash: myFileHash,
-					redeemOutput: redeemOutput,
-					multisigAddress: address,
+					redeemOutput: redeemOutput!,
+					multisigAddress: address!,
 					pubkeys: multisigPubkeys,
 					signatures: { [myPubkey]: mySignature, ...collectedSignatures }
 				};
-
-				console.log(finalStuff);
-				alert(JSON.stringify(finalStuff));
 			}
 		});
 
 		alreadyStartedMultisig = true;
 	}
+
+	$: finishedContractBlob = URL.createObjectURL(
+		new Blob([JSON.stringify(finishedContract, null, 4)])
+	);
 </script>
 
-<LabelledInput type="text" label="Your public key" bind:value={publicKey} />
+{#if publicKey && !coordinationStarted}
+	<p class="text-center">
+		Your public key: <br />
+		{publicKey}
+	</p>
+{/if}
 {#if !coordinationStarted}
 	<Button on:click={handleStartCoordination}>Start coordination</Button>
 {/if}
 
-{#if collectedBitcoinPubkeys.length != 0}
+{#if finishedContract}
+	<h1 class="text-3xl">Contract data generated</h1>
+	<Button>
+		<a download="contract_data.json" href={finishedContractBlob}>Download</a>
+	</Button>
+{:else if coordinationStarted}
 	<p>Collected client pubkeys:</p>
 	{#each collectedBitcoinPubkeys as pubkey}
-		<p>{pubkey}</p>
+		<!-- TODO: also check if signature is valid -->
+		{@const signed = collectedSignatures[pubkey] !== undefined}
+
+		{#if alreadyStartedMultisig}
+			<p>
+				{pubkey}: <span class="text-2xl">{signed ? '✅' : '🕓'}</span>
+				<span class="font-bold">{signed ? 'Signed' : 'Waiting'}</span>
+			</p>
+		{:else}
+			<p>
+				{pubkey}
+			</p>
+		{/if}
 	{/each}
-	{@const remainingSignatures =
-		collectedBitcoinPubkeys.length - Object.values(collectedSignatures).length}
-	<Button disabled={alreadyStartedMultisig} on:click={handleStartMultisig}>
-		Request approval
-		{alreadyStartedMultisig ? `(${remainingSignatures} remaining)` : ''}
-	</Button>
+	{#if !alreadyStartedMultisig}
+		<Button on:click={handleStartMultisig}>Request approval</Button>
+	{/if}
 {/if}

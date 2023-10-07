@@ -17,11 +17,11 @@
 
 	export let myFileHash: string;
 	export let wifKey: string;
+	export let alreadyConnected: boolean;
+
+	let alreadyApproved = false;
 
 	let coordinatorBitcoinPubkey = '';
-
-	let alreadyConnected = false;
-	let alreadyApproved = false;
 
 	let dataToSign: PartialContract | null = null;
 
@@ -97,15 +97,23 @@
 	}
 </script>
 
-<LabelledInput type="text" label="Coordinator public key" bind:value={coordinatorBitcoinPubkey} />
+{#if !alreadyConnected}
+	<LabelledInput type="text" label="Coordinator public key" bind:value={coordinatorBitcoinPubkey} />
+{/if}
 
 {#if dataToSign}
-	<p>Involved parties:</p>
-	{#each dataToSign.pubkeys as pubkey}
-		<p>{pubkey}</p>
-	{/each}
+	{#if alreadyApproved}
+		<p>Process finished, ask the coordinator for the contract file</p>
+	{:else}
+		<p>Involved parties:</p>
+		{#each dataToSign.pubkeys as pubkey}
+			<p>{pubkey}</p>
+		{/each}
 
-	<Button disabled={alreadyApproved} on:click={handleApprove}>Approve</Button>
+		<Button disabled={alreadyApproved} on:click={handleApprove}>Approve</Button>
+	{/if}
+{:else if alreadyConnected}
+	<p>Waiting for coordinator</p>
 {:else}
 	<Button disabled={alreadyConnected} on:click={handleConnectToCoordinator}
 		>Connect to coordinator</Button
