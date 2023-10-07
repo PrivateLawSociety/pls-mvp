@@ -68,7 +68,7 @@ export async function startTxSpendingFromMultisig(
 		});
 	});
 
-	receivingAddresses.forEach((_, i) => {
+	psbt.txInputs.forEach((_, i) => {
 		psbt.signInput(i, seckey);
 	});
 

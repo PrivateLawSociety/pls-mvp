@@ -35,19 +35,36 @@
 		setTimeout(() => alert('Copied to clipboard'), 0);
 	}
 
-	function publishTransaction() {
+	async function publishTransaction() {
 		if (!generatedTransactionHex) return;
 
-		fetch('https://mempool.space/testnet/api/tx', {
-			method: 'POST',
-			body: generatedTransactionHex
-		});
+		try {
+			const req = await fetch('https://mempool.space/testnet/api/tx', {
+				method: 'POST',
+				body: generatedTransactionHex
+			});
+
+			const text = await req.text();
+
+			if (req.status === 200) {
+				alert(`Transaction published! TxId: ${text}`);
+			} else {
+				alert(`Error: ${text}`);
+			}
+		} catch (error) {
+			alert(
+				'Error while publishing! Try disabling your adblocker/tracker blocker or try using another browser'
+			);
+		}
 	}
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
-	<h1 class="text-3xl font-bold">Finish spend from multisig</h1>
-	<LabelledInput type="text" label="PSBT hex" bind:value={psbtHex} />
+	{#if !generatedTransactionHex}
+		<h1 class="text-3xl font-bold">Finish spend from multisig</h1>
+		<LabelledInput type="text" label="PSBT hex" bind:value={psbtHex} />
+	{/if}
+
 	{#if generatedTransactionHex}
 		<h1 class="text-3xl">Transaction created</h1>
 		<Button on:click={publishTransaction}>🚀 Publish</Button>

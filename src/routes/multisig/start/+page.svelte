@@ -98,7 +98,7 @@
 		<h1 class="text-3xl">Spending initiated</h1>
 		<p>Send this to another party so that they can complete the spending:</p>
 		<div class="flex items-end gap-2">
-			<LabelledInput type="text" label="PSBT" bind:value={wifKey} />
+			<LabelledInput type="text" label="PSBT" bind:value={generatedPsbtHex} />
 			<Button on:click={copyToClipboard}>📋 Copy</Button>
 		</div>
 	{:else}
