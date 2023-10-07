@@ -4,6 +4,9 @@
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
 	<Button>
+		<a href="/keys">Key generation</a>
+	</Button>
+	<Button>
 		<a href="/contract/create">Create contract</a>
 	</Button>
 	<Button>
