@@ -15,6 +15,8 @@
 
 	let addressQuantity = 1;
 
+	let generatedPsbtHex: string | null = null;
+
 	// let feeAmount = 0;
 
 	let receivingAddresses: {
@@ -73,7 +75,7 @@
 	async function handleStartSpend() {
 		if (!contractData || !utxos || !transactionsHex) return alert("UTXOs haven't loaded yet");
 
-		const generatedPsbtHex = await startTxSpendingFromMultisig(
+		generatedPsbtHex = await startTxSpendingFromMultisig(
 			contractData.redeemOutput,
 			ECPair.fromWIF(wifKey, NETWORK),
 			NETWORK,
@@ -81,49 +83,61 @@
 			utxos,
 			transactionsHex
 		);
+	}
 
-		alert(`Generated PSBT to be sent to the other party: ${generatedPsbtHex}`);
+	function copyToClipboard() {
+		if (!generatedPsbtHex) return;
 
-		console.log(generatedPsbtHex);
+		navigator.clipboard.writeText(generatedPsbtHex);
+		setTimeout(() => alert('Copied to clipboard'), 0);
 	}
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
-	<h1 class="text-3xl font-bold">Start spend from multisig</h1>
-	<label class="flex items-center justify-center gap-2">
-		Contract data file:
-		<input type="file" bind:files={myFiles} />
-	</label>
+	{#if generatedPsbtHex}
+		<h1 class="text-3xl">Spending initiated</h1>
+		<p>Send this to another party so that they can complete the spending:</p>
+		<div class="flex items-end gap-2">
+			<LabelledInput type="text" label="PSBT" bind:value={wifKey} />
+			<Button on:click={copyToClipboard}>📋 Copy</Button>
+		</div>
+	{:else}
+		<h1 class="text-3xl font-bold">Start spend from multisig</h1>
+		<label class="flex items-center justify-center gap-2">
+			Contract data file:
+			<input type="file" bind:files={myFiles} />
+		</label>
 
-	{#if contractData}
-		<p class="text-xl">
-			Available balance: {availableBalance === undefined
-				? 'Loading...'
-				: `${availableBalance} sats`}
-		</p>
-		<LabelledInput
-			type="number"
-			label="How many addresses will receive?"
-			bind:value={addressQuantity}
-		/>
+		{#if contractData}
+			<p class="text-xl">
+				Available balance: {availableBalance === undefined
+					? 'Loading...'
+					: `${availableBalance} sats`}
+			</p>
+			<LabelledInput
+				type="number"
+				label="How many addresses will receive?"
+				bind:value={addressQuantity}
+			/>
 
-		{#each receivingAddresses as _, i}
-			<div class="flex gap-4">
-				<LabelledInput
-					type="text"
-					label="{i + 1}º receiving address"
-					bind:value={receivingAddresses[i].address}
-				/>
-				<LabelledInput type="number" label="Amount" bind:value={receivingAddresses[i].amount} />
-			</div>
-		{/each}
+			{#each receivingAddresses as _, i}
+				<div class="flex gap-4">
+					<LabelledInput
+						type="text"
+						label="{i + 1}º receiving address"
+						bind:value={receivingAddresses[i].address}
+					/>
+					<LabelledInput type="number" label="Amount" bind:value={receivingAddresses[i].amount} />
+				</div>
+			{/each}
 
-		<p>Network fee: {feeAmount}</p>
+			<p>Network fee: {feeAmount}</p>
 
-		<LabelledInput type="text" label="Wif key (private key)" bind:value={wifKey} />
+			<LabelledInput type="text" label="Wif key (private key)" bind:value={wifKey} />
 
-		{#if wifKey}
-			<Button on:click={handleStartSpend}>Start psbt</Button>
+			{#if wifKey}
+				<Button on:click={handleStartSpend}>Start spend</Button>
+			{/if}
 		{/if}
 	{/if}
 </div>
