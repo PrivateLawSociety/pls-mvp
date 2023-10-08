@@ -46,8 +46,7 @@
 		nostrSubscribe([
 			{
 				kinds: [FirstEvent],
-				'#p': [myNostrPubkey],
-				since: nostrNow()
+				'#p': [myNostrPubkey]
 			}
 		]).on('event', async (e) => {
 			if (e.kind === FirstEvent) {
@@ -103,8 +102,7 @@
 		nostrSubscribe([
 			{
 				kinds: [ThirdEvent],
-				'#p': [myNostrPubkey],
-				since: nostrNow()
+				'#p': [myNostrPubkey]
 			}
 		]).on('event', async (e) => {
 			const { signature } = JSON.parse(

@@ -53,9 +53,7 @@
 			{
 				authors: [BitcoinToNostrPubkey(coordinatorBitcoinPubkey)],
 				'#p': [myNostrPubkey],
-				kinds: [SecondEvent],
-
-				since: nostrNow()
+				kinds: [SecondEvent]
 			}
 		]).on('event', async (e) => {
 			const { pubkeys } = JSON.parse(

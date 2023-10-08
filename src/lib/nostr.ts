@@ -16,7 +16,6 @@ const relayList = [
 	'wss://relay.damus.io',
 	'wss://nostr.fmt.wiz.biz',
 	'wss://offchain.pub',
-	'wss://soloco.nl',
 	'wss://relay.current.fyi',
 	'wss://nos.lol'
 ];
