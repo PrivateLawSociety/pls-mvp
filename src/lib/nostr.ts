@@ -10,7 +10,16 @@ import {
 
 const relayPool = new SimplePool();
 
-const relayList = ['wss://nostr-pub.wellorder.net', 'wss://relay.nostr.band'];
+const relayList = [
+	'wss://nostr-pub.wellorder.net',
+	'wss://relay.nostr.band',
+	'wss://relay.damus.io',
+	'wss://nostr.fmt.wiz.biz',
+	'wss://offchain.pub',
+	'wss://soloco.nl',
+	'wss://relay.current.fyi',
+	'wss://nos.lol'
+];
 
 export async function makeNostrEvent(
 	privkey: string,
