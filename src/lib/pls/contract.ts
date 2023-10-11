@@ -2,15 +2,18 @@ import type { ECPairInterface } from 'ecpair';
 import { hashFromJSON, tryParseJSON } from '../utils';
 
 export interface PartialContract {
+	arbitratorPubkeys: string[];
+	arbitratorsQuorum: number;
+	clientPubkeys: string[];
 	fileHash: string;
-	pubkeys: string[];
 }
 
 export interface FinishedContractData {
+	arbitratorPubkeys: string[];
+	arbitratorsQuorum: number;
+	clientPubkeys: string[];
 	fileHash: string;
 	multisigAddress: string;
-	pubkeys: string[];
-	redeemOutput: string;
 	signatures: Record<string, string>;
 }
 
@@ -19,10 +22,11 @@ export function tryParseFinishedContract(stringifiedContract: string) {
 
 	if (
 		!maybecontractData ||
+		!maybecontractData.arbitratorPubkeys ||
+		!maybecontractData.arbitratorsQuorum ||
+		!maybecontractData.clientPubkeys ||
 		!maybecontractData.fileHash ||
 		!maybecontractData.multisigAddress ||
-		!maybecontractData.pubkeys ||
-		!maybecontractData.redeemOutput ||
 		!maybecontractData.signatures
 	)
 		return null;
@@ -33,10 +37,12 @@ export function tryParseFinishedContract(stringifiedContract: string) {
 /**
  * @description This ensures that other fields are excluded, so that they don't affect the final hash
  */
-function getMinimalPartialContract(partialContract: PartialContract) {
+function getMinimalPartialContract(partialContract: PartialContract): PartialContract {
 	return {
-		fileHash: partialContract.fileHash,
-		pubkeys: partialContract.pubkeys
+		arbitratorPubkeys: partialContract.arbitratorPubkeys,
+		arbitratorsQuorum: partialContract.arbitratorsQuorum,
+		clientPubkeys: partialContract.clientPubkeys,
+		fileHash: partialContract.fileHash
 	};
 }
 

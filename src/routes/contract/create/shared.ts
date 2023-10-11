@@ -1,12 +1,15 @@
 // coordinator <-- clients
 export interface FirstEventPayload {
 	pubkey: string;
+	isArbitrator: boolean;
 	fileHash: string;
 }
 
 // coordinator --> clients
 export interface SecondEventPayload {
-	pubkeys: string[];
+	arbitratorPubkeys: string[];
+	arbitratorsQuorum: number;
+	clientPubkeys: string[];
 }
 
 // coordinator <-- clients

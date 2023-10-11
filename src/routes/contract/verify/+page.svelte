@@ -52,7 +52,18 @@
 	</label>
 	{#if contractData}
 		<p>Multisig address: {contractData.multisigAddress}</p>
-		{#each contractData.pubkeys as pubkey}
+
+		<p>Involved clients:</p>
+		{#each contractData.clientPubkeys as pubkey}
+			{@const valid = isSignatureValid(contractData, pubkey)}
+			<p>
+				{pubkey}: <span class="text-2xl">{valid ? '✅' : '❌'}</span>
+				<span class="font-bold">{valid ? 'Valid' : 'Invalid'} signature</span>
+			</p>
+		{/each}
+
+		<p>Involved arbitrators:</p>
+		{#each contractData.arbitratorPubkeys as pubkey}
 			{@const valid = isSignatureValid(contractData, pubkey)}
 			<p>
 				{pubkey}: <span class="text-2xl">{valid ? '✅' : '❌'}</span>

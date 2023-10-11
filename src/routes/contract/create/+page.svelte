@@ -5,7 +5,7 @@
 	import Client from './Client.svelte';
 	import Coordinator from './Coordinator.svelte';
 
-	let userType: 'coordinator' | 'client' | null = null;
+	let userType: 'coordinator' | 'client' | 'arbitrator' | null = null;
 
 	let myFiles: FileList | undefined;
 	let myFileHash: string;
@@ -27,7 +27,9 @@
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
 	{#if userType === null}
 		<h1 class="text-3xl">Which kind of user are you?</h1>
+		<p>One user should be a coordinator</p>
 		<Button on:click={() => (userType = 'client')}>Client</Button>
+		<Button on:click={() => (userType = 'arbitrator')}>Arbitrator</Button>
 		<Button on:click={() => (userType = 'coordinator')}>Coordinator</Button>
 	{:else}
 		{#if !started}
@@ -38,10 +40,15 @@
 			<LabelledInput type="text" label="Your WIF key (private key)" bind:value={wifKey} />
 		{/if}
 
-		{#if userType === 'client'}
-			<Client {myFileHash} {wifKey} bind:alreadyConnected={started} />
-		{:else if userType === 'coordinator'}
+		{#if userType === 'coordinator'}
 			<Coordinator {myFileHash} {wifKey} bind:coordinationStarted={started} />
+		{:else}
+			<Client
+				{myFileHash}
+				{wifKey}
+				isArbitrator={userType === 'arbitrator'}
+				bind:alreadyConnected={started}
+			/>
 		{/if}
 	{/if}
 </div>

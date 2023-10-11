@@ -1,8 +1,15 @@
 <script lang="ts">
-	import { ECPair, NETWORK, startTxSpendingFromMultisig, type UTXO } from '$lib/bitcoinjs';
+	import {
+		createMultisig,
+		ECPair,
+		NETWORK,
+		startTxSpendingFromMultisig,
+		type UTXO
+	} from '$lib/bitcoinjs';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
+	import type { PsbtMetadata } from '../shared';
 
 	let wifKey = '';
 
@@ -15,7 +22,7 @@
 
 	let addressQuantity = 1;
 
-	let generatedPsbtHex: string | null = null;
+	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 
 	// let feeAmount = 0;
 
@@ -75,30 +82,60 @@
 	async function handleStartSpend() {
 		if (!contractData || !utxos || !transactionsHex) return alert("UTXOs haven't loaded yet");
 
-		generatedPsbtHex = await startTxSpendingFromMultisig(
-			contractData.redeemOutput,
-			ECPair.fromWIF(wifKey, NETWORK),
-			NETWORK,
-			receivingAddresses,
-			utxos,
-			transactionsHex
+		const { multisig, multisigScripts } = createMultisig(
+			contractData.clientPubkeys.map((pubkey) =>
+				ECPair.fromPublicKey(Buffer.from(pubkey, 'hex'), { network: NETWORK })
+			),
+			contractData.arbitratorPubkeys.map((pubkey) =>
+				ECPair.fromPublicKey(Buffer.from(pubkey, 'hex'), { network: NETWORK })
+			),
+			contractData.arbitratorsQuorum,
+			NETWORK
 		);
+
+		const myPubkey = ECPair.fromWIF(wifKey, NETWORK).publicKey;
+
+		const possibleScripts = multisigScripts.filter(({ combination }) =>
+			combination.some((ecpair) => ecpair.publicKey.toString('hex') === myPubkey.toString('hex'))
+		);
+
+		generatedPSBTsMetadata = [];
+
+		for (const script of possibleScripts) {
+			const redeemOutput = script.leaf.output.toString('hex');
+
+			generatedPSBTsMetadata = [
+				...generatedPSBTsMetadata,
+				{
+					redeemOutput,
+					psbtHex: startTxSpendingFromMultisig(
+						multisig,
+						redeemOutput,
+						ECPair.fromWIF(wifKey, NETWORK),
+						NETWORK,
+						receivingAddresses,
+						utxos
+					).toHex(),
+					pubkeys: script.combination.map((ecpair) => ecpair.publicKey.toString('hex'))
+				}
+			];
+		}
 	}
 
 	function copyToClipboard() {
-		if (!generatedPsbtHex) return;
+		if (!generatedPSBTsMetadata) return;
 
-		navigator.clipboard.writeText(generatedPsbtHex);
+		navigator.clipboard.writeText(JSON.stringify(generatedPSBTsMetadata));
 		setTimeout(() => alert('Copied to clipboard'), 0);
 	}
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
-	{#if generatedPsbtHex}
+	{#if generatedPSBTsMetadata}
 		<h1 class="text-3xl">Spending initiated</h1>
 		<p>Send this to another party so that they can complete the spending:</p>
 		<div class="flex items-end gap-2">
-			<LabelledInput type="text" label="PSBT" bind:value={generatedPsbtHex} />
+			<LabelledInput type="text" label="PSBT" value={JSON.stringify(generatedPSBTsMetadata)} />
 			<Button on:click={copyToClipboard}>📋 Copy</Button>
 		</div>
 	{:else}

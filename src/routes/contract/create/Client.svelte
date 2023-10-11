@@ -10,7 +10,7 @@
 		type ThirdEventPayload,
 		ThirdEvent
 	} from './shared';
-	import { broadcastToNostr, makeNostrEvent, nostrNow, nostrSubscribe } from '$lib/nostr';
+	import { broadcastToNostr, makeNostrEvent, nostrNowAdjusted, nostrSubscribe } from '$lib/nostr';
 	import { signPartialContract, type PartialContract } from '$lib/pls/contract';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -18,6 +18,7 @@
 	export let myFileHash: string;
 	export let wifKey: string;
 	export let alreadyConnected: boolean;
+	export let isArbitrator: boolean;
 
 	let alreadyApproved = false;
 
@@ -39,6 +40,7 @@
 			BitcoinToNostrPubkey(coordinatorBitcoinPubkey),
 			JSON.stringify({
 				pubkey: myBitcoinPubKey,
+				isArbitrator: isArbitrator,
 				fileHash: myFileHash
 			} satisfies FirstEventPayload)
 		);
@@ -53,16 +55,19 @@
 			{
 				authors: [BitcoinToNostrPubkey(coordinatorBitcoinPubkey)],
 				'#p': [myNostrPubkey],
-				kinds: [SecondEvent]
+				kinds: [SecondEvent],
+				since: nostrNowAdjusted()
 			}
 		]).on('event', async (e) => {
-			const { pubkeys } = JSON.parse(
+			const { arbitratorPubkeys, arbitratorsQuorum, clientPubkeys } = JSON.parse(
 				await nip04.decrypt(myPrivKey, e.pubkey, e.content)
 			) as SecondEventPayload;
 
 			dataToSign = {
-				fileHash: myFileHash,
-				pubkeys: pubkeys
+				arbitratorPubkeys,
+				arbitratorsQuorum,
+				clientPubkeys,
+				fileHash: myFileHash
 			};
 		});
 
@@ -103,10 +108,15 @@
 	{#if alreadyApproved}
 		<p>Process finished, ask the coordinator for the contract file</p>
 	{:else}
-		<p>Involved parties:</p>
-		{#each dataToSign.pubkeys as pubkey}
+		<p>Involved clients:</p>
+		{#each dataToSign.clientPubkeys as pubkey}
 			<p>{pubkey}</p>
 		{/each}
+		<p>Involved arbitrators:</p>
+		{#each dataToSign.arbitratorPubkeys as pubkey}
+			<p>{pubkey}</p>
+		{/each}
+		<p>How many arbitrators need to agree: {dataToSign.arbitratorsQuorum}</p>
 
 		<Button disabled={alreadyApproved} on:click={handleApprove}>Approve</Button>
 	{/if}

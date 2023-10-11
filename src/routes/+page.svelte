@@ -13,9 +13,9 @@
 		<a href="/contract/verify">Verify contract</a>
 	</Button>
 	<Button>
-		<a href="/multisig/start">Start multisig spend</a>
+		<a href="/multisig/start">Start spend</a>
 	</Button>
 	<Button>
-		<a href="/multisig/finish">Finish multisig spend</a>
+		<a href="/multisig/continue">Continue spend</a>
 	</Button>
 </div>

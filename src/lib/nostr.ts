@@ -42,7 +42,11 @@ export async function makeNostrEvent(
 	return blankEvent;
 }
 
-export function nostrNow() {
+export function nostrNowAdjusted() {
+	return nostrNow() - 60 * 2; // 2 minutes before, to work around clock drift
+}
+
+function nostrNow() {
 	return Math.floor(Date.now() / 1000);
 }
 
