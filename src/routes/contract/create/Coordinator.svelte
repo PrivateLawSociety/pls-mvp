@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ECPair, NETWORK, createMultisig } from '$lib/bitcoinjs';
+	import { ECPair, NETWORK, createMultisig } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import { broadcastToNostr, makeNostrEvent, nostrNowAdjusted, nostrSubscribe } from '$lib/nostr';
 	import { nip04 } from 'nostr-tools';

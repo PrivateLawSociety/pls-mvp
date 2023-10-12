@@ -5,7 +5,7 @@
 		NETWORK,
 		startTxSpendingFromMultisig,
 		type UTXO
-	} from '$lib/bitcoinjs';
+	} from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
@@ -28,13 +28,13 @@
 
 	let receivingAddresses: {
 		address: string;
-		amount: number;
+		value: number;
 	}[] = [];
 
 	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0);
 
 	$: feeAmount = availableBalance
-		? availableBalance - receivingAddresses.reduce((acc, cv) => acc + cv.amount, 0)
+		? availableBalance - receivingAddresses.reduce((acc, cv) => acc + cv.value, 0)
 		: null;
 
 	$: if (receivingAddresses.length < addressQuantity) {
@@ -42,7 +42,7 @@
 			...receivingAddresses,
 			{
 				address: '',
-				amount: 0
+				value: 0
 			}
 		];
 	}
@@ -164,7 +164,7 @@
 						label="{i + 1}º receiving address"
 						bind:value={receivingAddresses[i].address}
 					/>
-					<LabelledInput type="number" label="Amount" bind:value={receivingAddresses[i].amount} />
+					<LabelledInput type="number" label="Amount" bind:value={receivingAddresses[i].value} />
 				</div>
 			{/each}
 

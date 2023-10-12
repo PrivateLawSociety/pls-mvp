@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ECPair, NETWORK } from '$lib/bitcoinjs';
+	import { ECPair, NETWORK } from '$lib/pls/multisig';
 	import { nip04 } from 'nostr-tools';
 	import {
 		BitcoinToNostrPubkey,

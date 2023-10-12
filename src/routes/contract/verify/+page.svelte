@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ECPair } from '$lib/bitcoinjs';
+	import { ECPair } from '$lib/pls/multisig';
 	import {
 		tryParseFinishedContract,
 		type FinishedContractData,

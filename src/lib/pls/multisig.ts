@@ -3,7 +3,7 @@ import ECPairFactory, { type ECPairInterface } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
 import type { Taptree } from 'bitcoinjs-lib/src/types';
-import { sortScriptsIntoTree } from './huffman';
+import { sortScriptsIntoTree } from '../huffman';
 
 export interface UTXO {
 	txid: string;
@@ -14,8 +14,6 @@ export interface UTXO {
 export const ECPair = ECPairFactory(ecc);
 
 bitcoin.initEccLib(ecc);
-
-export const bitcoinjs = bitcoin;
 
 export const NETWORK = bitcoin.networks.testnet;
 
@@ -81,7 +79,7 @@ export function startTxSpendingFromMultisig(
 	network: bitcoin.Network,
 	receivingAddresses: {
 		address: string;
-		amount: number;
+		value: number;
 	}[],
 	utxos: UTXO[]
 ) {
@@ -105,39 +103,18 @@ export function startTxSpendingFromMultisig(
 
 	const psbt = new bitcoin.Psbt({ network });
 
-	utxos.forEach((utxo) => {
-		psbt.addInput({
+	psbt.addInputs(
+		utxos.map((utxo) => ({
 			hash: utxo.txid,
 			index: utxo.vout,
 			witnessUtxo: { value: utxo.value, script: multisigP2tr.output! },
 			tapLeafScript: [tapLeafScript]
-		});
-	});
+		}))
+	);
 
-	receivingAddresses.forEach(({ address, amount }) => {
-		psbt.addOutput({
-			address,
-			value: amount
-		});
-	});
+	psbt.addOutputs(receivingAddresses);
 
-	psbt.txInputs.forEach((_, i) => {
-		psbt.signInput(i, seckey);
-	});
+	psbt.signAllInputs(seckey);
 
 	return psbt;
-}
-
-export function continueTxSpendingFromMultisig(psbt: bitcoin.Psbt, seckey: ECPairInterface) {
-	psbt.txInputs.forEach((_, i) => psbt.signInput(i, seckey));
-}
-
-export function finishTxSpendingFromMultisig(psbt: bitcoin.Psbt, seckeys: ECPairInterface[]) {
-	psbt.txInputs.forEach((_, i) => seckeys.forEach((seckey) => psbt.signInput(i, seckey)));
-
-	psbt.finalizeAllInputs();
-
-	const tx = psbt.extractTransaction();
-
-	return tx;
 }

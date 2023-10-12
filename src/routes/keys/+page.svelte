@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ECPair, NETWORK } from '$lib/bitcoinjs';
+	import { ECPair, NETWORK } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import type { ECPairInterface } from 'ecpair';

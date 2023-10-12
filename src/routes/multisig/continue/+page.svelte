@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ECPair, NETWORK } from '$lib/bitcoinjs';
+	import { ECPair, NETWORK } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { Psbt } from 'bitcoinjs-lib';
@@ -50,7 +50,7 @@
 			.map((metadata) => {
 				const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK });
 
-				psbt.txInputs.map((txInput) => psbt.signInput(txInput.index, myECPair));
+				psbt.signAllInputs(myECPair);
 
 				return {
 					...metadata,
