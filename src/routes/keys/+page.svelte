@@ -3,6 +3,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import type { ECPairInterface } from 'ecpair';
+	import { nostrAuth } from '$lib/nostr';
 
 	let wifKey = '';
 	let ecpair: ECPairInterface | null = null;
@@ -12,7 +13,13 @@
 	$: {
 		try {
 			ecpair = ECPair.fromWIF(wifKey, NETWORK);
-		} catch (error) {}
+			nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
+		} catch (error) {
+			try {
+				ecpair = ECPair.fromPrivateKey(Buffer.from(wifKey, 'hex'), { network: NETWORK });
+				nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
+			} catch (error) {}
+		}
 	}
 
 	function handleGenerateKeypair() {
@@ -35,7 +42,7 @@
 	</Button>
 
 	<div class="flex items-end gap-2">
-		<LabelledInput type="text" label="Your WIF key (private key)" bind:value={wifKey} />
+		<LabelledInput type="text" label="Your WIF key or private key" bind:value={wifKey} />
 		<Button on:click={copyToClipboard} disabled={wifKey === ''}>📋 Copy</Button>
 	</div>
 

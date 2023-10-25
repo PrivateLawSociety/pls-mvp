@@ -1,9 +1,9 @@
 <script context="module" lang="ts">
-	import { nostrNowBasic, relayList, relayPool } from '$lib/nostr';
 	import { peopleMetadata } from '$lib/stores';
 	import { nip19 } from 'nostr-tools';
 	import { createEventDispatcher } from 'svelte';
 	import { writable } from 'svelte/store';
+	import Person from './Person.svelte';
 
 	let closeOldDropdown = writable<(() => void) | null>(null);
 </script>
@@ -50,21 +50,14 @@
 
 <div class="relative">
 	<div class="relative inline-block">
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="cursor-pointer" on:click={toggleDropdown}>
+		<button class="cursor-pointer" on:click={toggleDropdown}>
 			{#if selectedPerson}
-				<img
-					src={$peopleMetadata[selectedPerson]?.picture}
-					alt={$peopleMetadata[selectedPerson]?.name}
-					class="w-20 h-20 rounded-full object-contain"
-				/>
-				<p>{$peopleMetadata[selectedPerson]?.name}</p>
+				<Person pubkey={selectedPerson} />
 			{:else}
 				<div class="w-20 h-20 bg-gray-300 rounded-full" />
 				<p>Unselected</p>
 			{/if}
-		</div>
+		</button>
 
 		{#if isDropdownOpen}
 			<div

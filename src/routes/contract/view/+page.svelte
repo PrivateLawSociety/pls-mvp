@@ -11,6 +11,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import Person from '$lib/components/Person.svelte';
 	import { hashFromFile } from '$lib/utils';
+	import { ECPair, NETWORK, createMultisig } from '$lib/pls/multisig';
 
 	let contractsData: Record<string, PartialContract> = {};
 
@@ -89,26 +90,64 @@
 				['p', pubkey]
 			]);
 
-			console.log(event);
-
 			broadcastToNostr(event);
 		}
 	}
 
 	// TODO: also check if signature is valid
 	function isContractSignedBy(fileHash: string, pubkey: string) {
-		console.log('start');
 		for (const [hash, signatures] of Object.entries(contractSignatures)) {
 			if (hash !== fileHash) return false;
-			console.log('hash', signatures, pubkey);
 
 			if (Object.keys(signatures).includes(pubkey)) {
-				console.log('true');
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	function hasAllSignatures(fileHash: string) {
+		console.log(contractsData);
+		console.log(contractSignatures);
+
+		if (contractsData[fileHash] === undefined || contractSignatures[fileHash] === undefined)
+			return false;
+
+		return [
+			...contractsData[fileHash].clientPubkeys,
+			...contractsData[fileHash].arbitratorPubkeys
+		].every((pubkey) => Object.keys(contractSignatures[fileHash]).includes(pubkey));
+	}
+
+	function exportContract(fileHash: string) {
+		const { arbitratorPubkeys, arbitratorsQuorum, clientPubkeys } = contractsData[fileHash];
+
+		const { multisig } = createMultisig(
+			clientPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
+			arbitratorPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
+			arbitratorsQuorum,
+			NETWORK
+		);
+
+		const finishedContract = {
+			arbitratorPubkeys,
+			arbitratorsQuorum,
+			clientPubkeys,
+			fileHash: myFileHash,
+			multisigAddress: multisig.address!,
+			signatures: contractSignatures[fileHash]
+		};
+
+		const a = document.createElement('a');
+		const url = window.URL.createObjectURL(new Blob([JSON.stringify(finishedContract, null, 4)]));
+		a.href = url;
+		a.download = 'contract_data.json';
+
+		a.click();
+		window.URL.revokeObjectURL(url);
+
+		return finishedContract;
 	}
 </script>
 
@@ -158,6 +197,12 @@
 			{:else if myFileHash !== undefined}
 				<p>Contract text doesn't match!</p>
 			{/if}
+
+			{#key contractSignatures}
+				{#if hasAllSignatures(data.fileHash)}
+					<Button on:click={() => exportContract(data.fileHash)}>Export contract</Button>
+				{/if}
+			{/key}
 		{/each}
 	</div>
 </div>

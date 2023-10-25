@@ -2,6 +2,8 @@
 	import { peopleMetadata } from '$lib/stores';
 
 	export let pubkey: string;
+
+	$: peopleMetadata.fetchPerson(pubkey);
 </script>
 
 <img

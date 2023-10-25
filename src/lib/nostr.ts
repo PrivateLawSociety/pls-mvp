@@ -71,7 +71,7 @@ public key: ${pubkey}`
 		);
 
 		alert(
-			'Using a nostr extension such as getalby.com is recommended, but a private key was copied to your clipboard so you can try out PLS without it'
+			'Using a nostr extension such as getalby.com is recommended, but a keypair was copied to your clipboard so you can try out PLS without it'
 		);
 
 		store.set({
@@ -83,6 +83,14 @@ public key: ${pubkey}`
 	}
 
 	return {
+		loginWithPrivkey(privkey: string) {
+			const pubkey = getPublicKey(privkey);
+
+			store.set({
+				privkey,
+				pubkey
+			});
+		},
 		async tryLogin() {
 			if (get(store)?.pubkey) return true;
 
