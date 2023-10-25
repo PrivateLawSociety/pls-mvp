@@ -1,28 +1,17 @@
-// coordinator <-- clients
-export interface FirstEventPayload {
-	pubkey: string;
-	isArbitrator: boolean;
-	fileHash: string;
-}
-
-// coordinator --> clients
-export interface SecondEventPayload {
+// maker ---> takers
+export interface ContractRequestPayload {
 	arbitratorPubkeys: string[];
 	arbitratorsQuorum: number;
 	clientPubkeys: string[];
+	fileHash: string;
 }
 
-// coordinator <-- clients
-export interface ThirdEventPayload {
+// taker ---> maker + other takers
+export interface ContractApprovalPayload {
 	signature: string;
+	fileHash: string;
 }
 
 // these events are non-standard, I made them up for the purposes of PLS
-export const FirstEvent = 26969;
-export const SecondEvent = 26970;
-export const ThirdEvent = 26971;
-
-export function BitcoinToNostrPubkey(bitcoinPubkey: string) {
-	// Bitcoin pubkeys have a prefix, nostr pubkeys don't
-	return bitcoinPubkey.slice(-64);
-}
+export const ContractRequestEvent = 26970;
+export const ContractApprovalEvent = 26971;

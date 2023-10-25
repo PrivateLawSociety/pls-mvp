@@ -10,6 +10,9 @@
 		<a href="/contract/create">Create contract</a>
 	</Button>
 	<Button>
+		<a href="/contract/view">View contracts</a>
+	</Button>
+	<Button>
 		<a href="/contract/verify">Verify contract</a>
 	</Button>
 	<Button>

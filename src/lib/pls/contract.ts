@@ -46,8 +46,15 @@ function getMinimalPartialContract(partialContract: PartialContract): PartialCon
 	};
 }
 
-export function signPartialContract(keypair: ECPairInterface, partialContract: PartialContract) {
-	const signature = keypair.sign(hashFromJSON(getMinimalPartialContract(partialContract)));
+export async function signPartialContract(
+	signer: {
+		signSchnorr(hash: Buffer): Promise<Buffer>;
+	},
+	partialContract: PartialContract
+) {
+	const signature = await signer.signSchnorr(
+		hashFromJSON(getMinimalPartialContract(partialContract))
+	);
 
 	return signature;
 }
@@ -57,5 +64,5 @@ export function verifyPartialContract(
 	partialContract: PartialContract,
 	signature: Buffer
 ) {
-	return keypair.verify(hashFromJSON(getMinimalPartialContract(partialContract)), signature);
+	return keypair.verifySchnorr(hashFromJSON(getMinimalPartialContract(partialContract)), signature);
 }
