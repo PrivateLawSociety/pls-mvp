@@ -33,8 +33,6 @@
 		if (await nostrAuth.tryLogin()) {
 			if (!$nostrAuth?.pubkey) return;
 
-			console.log($nostrAuth.pubkey);
-
 			relayPool
 				.sub(relayList, [
 					{
@@ -108,9 +106,6 @@
 	}
 
 	function hasAllSignatures(fileHash: string) {
-		console.log(contractsData);
-		console.log(contractSignatures);
-
 		if (contractsData[fileHash] === undefined || contractSignatures[fileHash] === undefined)
 			return false;
 

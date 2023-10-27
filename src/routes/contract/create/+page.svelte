@@ -75,13 +75,9 @@
 		} satisfies ContractRequestPayload;
 
 		for (const pubkey of pubkeys) {
-			const otherPubkey = pubkey;
+			const encryptedText = await nostrAuth.encryptDM(pubkey, JSON.stringify(payload));
 
-			const encryptedText = await nostrAuth.encryptDM(otherPubkey, JSON.stringify(payload));
-
-			const event = await nostrAuth.makeEvent(ContractRequestEvent, encryptedText, [
-				['p', otherPubkey]
-			]);
+			const event = await nostrAuth.makeEvent(ContractRequestEvent, encryptedText, [['p', pubkey]]);
 
 			broadcastToNostr(event);
 		}

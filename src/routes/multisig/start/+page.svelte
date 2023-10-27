@@ -84,10 +84,10 @@
 
 		const { multisig, multisigScripts } = createMultisig(
 			contractData.clientPubkeys.map((pubkey) =>
-				ECPair.fromPublicKey(Buffer.from(pubkey, 'hex'), { network: NETWORK })
+				ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK })
 			),
 			contractData.arbitratorPubkeys.map((pubkey) =>
-				ECPair.fromPublicKey(Buffer.from(pubkey, 'hex'), { network: NETWORK })
+				ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK })
 			),
 			contractData.arbitratorsQuorum,
 			NETWORK

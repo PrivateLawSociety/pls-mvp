@@ -6,6 +6,7 @@
 		verifyPartialContract
 	} from '$lib/pls/contract';
 	import { hashFromFile } from '$lib/utils';
+	import Person from '$lib/components/Person.svelte';
 
 	let contractDataFile: FileList | undefined;
 
@@ -36,7 +37,7 @@
 	}
 
 	function isSignatureValid(contractData: FinishedContractData, pubkey: string) {
-		const ecpair = ECPair.fromPublicKey(Buffer.from(pubkey, 'hex'));
+		const ecpair = ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'));
 		const signature = contractData.signatures[pubkey];
 		const isValid = verifyPartialContract(ecpair, contractData, Buffer.from(signature, 'hex'));
 
@@ -54,22 +55,32 @@
 		<p>Multisig address: {contractData.multisigAddress}</p>
 
 		<p>Involved clients:</p>
-		{#each contractData.clientPubkeys as pubkey}
-			{@const valid = isSignatureValid(contractData, pubkey)}
-			<p>
-				{pubkey}: <span class="text-2xl">{valid ? '✅' : '❌'}</span>
-				<span class="font-bold">{valid ? 'Valid' : 'Invalid'} signature</span>
-			</p>
-		{/each}
+		<div class="flex flex-wrap gap-4">
+			{#each contractData.clientPubkeys as pubkey}
+				{@const valid = isSignatureValid(contractData, pubkey)}
+				<div class="flex flex-col">
+					<Person {pubkey} />
+					<p>
+						<span class="text-2xl">{valid ? '✅' : '❌'}</span>
+						<span class="font-bold">{valid ? 'Valid' : 'Invalid'}</span>
+					</p>
+				</div>
+			{/each}
+		</div>
 
 		<p>Involved arbitrators:</p>
-		{#each contractData.arbitratorPubkeys as pubkey}
-			{@const valid = isSignatureValid(contractData, pubkey)}
-			<p>
-				{pubkey}: <span class="text-2xl">{valid ? '✅' : '❌'}</span>
-				<span class="font-bold">{valid ? 'Valid' : 'Invalid'} signature</span>
-			</p>
-		{/each}
+		<div class="flex flex-wrap gap-4">
+			{#each contractData.arbitratorPubkeys as pubkey}
+				{@const valid = isSignatureValid(contractData, pubkey)}
+				<div class="flex flex-col">
+					<Person {pubkey} />
+					<p>
+						<span class="text-2xl">{valid ? '✅' : '❌'}</span>
+						<span class="font-bold">{valid ? 'Signed' : 'Invalid'}</span>
+					</p>
+				</div>
+			{/each}
+		</div>
 
 		<label class="flex items-center justify-center gap-2">
 			Contract text file:

@@ -5,10 +5,10 @@
 	import type { ECPairInterface } from 'ecpair';
 	import { nostrAuth } from '$lib/nostr';
 
-	let wifKey = '';
+	let wifKey = $nostrAuth?.privkey ?? '';
 	let ecpair: ECPairInterface | null = null;
 
-	$: publicKey = ecpair?.publicKey.toString('hex');
+	$: publicKey = ecpair?.publicKey.toString('hex').slice(-64);
 
 	$: {
 		try {
