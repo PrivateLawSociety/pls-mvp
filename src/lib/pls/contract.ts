@@ -48,7 +48,7 @@ function getMinimalPartialContract(partialContract: PartialContract): PartialCon
 
 export async function signPartialContract(
 	signer: {
-		signSchnorr(hash: Buffer): Promise<Buffer>;
+		signSchnorr(hash: Buffer): Promise<Buffer> | Buffer;
 	},
 	partialContract: PartialContract
 ) {

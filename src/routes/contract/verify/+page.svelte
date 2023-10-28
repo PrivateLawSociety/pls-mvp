@@ -7,6 +7,7 @@
 	} from '$lib/pls/contract';
 	import { hashFromFile } from '$lib/utils';
 	import Person from '$lib/components/Person.svelte';
+	import { networks } from 'bitcoinjs-lib';
 
 	let contractDataFile: FileList | undefined;
 
@@ -43,6 +44,9 @@
 
 		return isValid;
 	}
+
+	// console.log('main:', ECPair.makeRandom({ network: networks.bitcoin }).publicKey.toString('hex'));
+	// console.log('test:', ECPair.makeRandom({ network: networks.bitcoin }).publicKey.toString('hex'));
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">

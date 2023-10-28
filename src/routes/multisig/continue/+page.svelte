@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { ECPair, NETWORK } from '$lib/pls/multisig';
+	import { NETWORK } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { Psbt } from 'bitcoinjs-lib';
 	import type { PsbtMetadata } from '../shared';
+	import { nostrAuth } from '$lib/nostr';
+	import { onMount } from 'svelte';
 
-	let wifKey = '';
 	let psbtsMetadataStringified = '';
 
 	export let psbtsMetadata: PsbtMetadata[] | null = null;
@@ -26,6 +27,10 @@
 		}
 	}
 
+	onMount(() => {
+		nostrAuth.tryLogin();
+	});
+
 	// for security reasons, check if all PSBTs are equivalent before signing them
 	function areAllPsbtsEquivalent(psbtsMetadata: PsbtMetadata[]) {
 		let firstPsbtMetadata = psbtsMetadata[0];
@@ -43,20 +48,32 @@
 	async function handleApproveTransaction() {
 		if (!psbtsMetadata) return;
 
-		const myECPair = ECPair.fromWIF(wifKey, NETWORK);
+		const privkey = $nostrAuth?.privkey;
+		const pubkey = $nostrAuth?.pubkey;
 
-		generatedPSBTsMetadata = psbtsMetadata
-			.filter(({ pubkeys }) => pubkeys.includes(myECPair.publicKey.toString('hex')))
-			.map((metadata) => {
-				const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK });
+		if (!privkey || !pubkey)
+			return alert(
+				'Spend is currently only enabled if you specify your private key in the keygen area'
+			);
 
-				psbt.signAllInputs(myECPair);
+		const signer = nostrAuth.getSigner();
 
-				return {
-					...metadata,
-					psbtHex: psbt.toHex()
-				};
-			});
+		if (!signer) return;
+
+		generatedPSBTsMetadata = await Promise.all(
+			psbtsMetadata
+				.filter(({ pubkeys }) => pubkeys.includes('02' + pubkey))
+				.map(async (metadata) => {
+					const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK });
+
+					await psbt.signAllInputsAsync(signer);
+
+					return {
+						...metadata,
+						psbtHex: psbt.toHex()
+					};
+				})
+		);
 
 		// There's only one spending possibility left, so the tx can be finished
 		if (generatedPSBTsMetadata.length === 1) {
@@ -127,10 +144,7 @@
 		{#each Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK }).txOutputs as output}
 			<p>{output.address} receives {output.value}</p>
 		{/each}
-		<LabelledInput type="text" label="WIF key (private key)" bind:value={wifKey} />
-		{#if wifKey}
-			<Button on:click={handleApproveTransaction}>Approve transaction</Button>
-		{/if}
+		<Button on:click={handleApproveTransaction}>Approve transaction</Button>
 	{:else if psbtsMetadataStringified != ''}
 		<p>Invalid PSBT</p>
 	{/if}

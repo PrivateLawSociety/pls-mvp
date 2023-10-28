@@ -72,7 +72,11 @@
 
 		const dataToSign = contractsData[fileHash];
 
-		const signature = (await signPartialContract(nostrAuth, dataToSign)).toString('hex');
+		const signer = nostrAuth.getSigner();
+
+		if (!signer) return;
+
+		const signature = (await signPartialContract(signer, dataToSign)).toString('hex');
 
 		const pubkeys = [...dataToSign.arbitratorPubkeys, ...dataToSign.clientPubkeys];
 

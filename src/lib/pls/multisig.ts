@@ -72,10 +72,10 @@ export function createMultisig(
 	return { multisigScripts, multisig };
 }
 
-export function startTxSpendingFromMultisig(
+export async function startTxSpendingFromMultisig(
 	multisig: bitcoin.payments.Payment,
 	redeemOutput: string,
-	seckey: ECPairInterface,
+	signer: bitcoin.Signer | bitcoin.SignerAsync,
 	network: bitcoin.Network,
 	receivingAddresses: {
 		address: string;
@@ -114,7 +114,7 @@ export function startTxSpendingFromMultisig(
 
 	psbt.addOutputs(receivingAddresses);
 
-	psbt.signAllInputs(seckey);
+	await psbt.signAllInputsAsync(signer)
 
 	return psbt;
 }

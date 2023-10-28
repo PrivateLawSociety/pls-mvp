@@ -4,6 +4,7 @@
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import type { ECPairInterface } from 'ecpair';
 	import { nostrAuth } from '$lib/nostr';
+	import { onMount } from 'svelte';
 
 	let wifKey = $nostrAuth?.privkey ?? '';
 	let ecpair: ECPairInterface | null = null;
@@ -22,6 +23,10 @@
 		}
 	}
 
+	onMount(() => {
+		if (window.nostr) nostrAuth.tryLogin();
+	});
+
 	function handleGenerateKeypair() {
 		ecpair = ECPair.makeRandom({
 			network: NETWORK
@@ -37,6 +42,10 @@
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
+	{#if !$nostrAuth?.privkey && $nostrAuth?.pubkey}
+		<p>Logged in with nostr extension!</p>
+	{/if}
+
 	<Button on:click={handleGenerateKeypair}>
 		<a href="/keys">Generate new keys</a>
 	</Button>
@@ -46,10 +55,10 @@
 		<Button on:click={copyToClipboard} disabled={wifKey === ''}>📋 Copy</Button>
 	</div>
 
-	{#if publicKey}
+	{#if publicKey || $nostrAuth?.pubkey}
 		<p class="text-center">
 			Your public key: <br />
-			{publicKey}
+			{$nostrAuth?.pubkey}
 		</p>
 	{/if}
 </div>

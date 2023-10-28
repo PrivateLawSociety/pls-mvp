@@ -3,14 +3,14 @@ import {
 	getPublicKey,
 	SimplePool,
 	type Event,
-	type Filter,
-	type SubscriptionOptions,
 	getSignature,
 	generatePrivateKey,
 	nip04
 } from 'nostr-tools';
 import { get, writable } from 'svelte/store';
-import { ECPair } from './pls/multisig';
+import { ECPair, NETWORK } from './pls/multisig';
+import type { Signer } from 'bitcoinjs-lib';
+import type { SignerAsync } from 'ecpair';
 
 export const relayPool = new SimplePool();
 
@@ -94,10 +94,8 @@ public key: ${pubkey}`
 		async tryLogin() {
 			if (get(store)?.pubkey) return true;
 
-			// @ts-expect-error
 			if (window.nostr) {
 				try {
-					// @ts-expect-error
 					const pubkey: string = await window.nostr.getPublicKey();
 
 					store.set({ pubkey });
@@ -116,8 +114,7 @@ public key: ${pubkey}`
 			if (privkey) {
 				return await nip04.encrypt(privkey, otherPubkey, text);
 			} else {
-				// @ts-expect-error
-				return (await window.nostr.nip04.encrypt(otherPubkey, text)) as string;
+				return await window.nostr!.nip04.encrypt(otherPubkey, text);
 			}
 		},
 		async decryptDM(otherPubkey: string, text: string) {
@@ -126,8 +123,7 @@ public key: ${pubkey}`
 			if (privkey) {
 				return await nip04.decrypt(privkey, otherPubkey, text);
 			} else {
-				// @ts-expect-error
-				return (await window.nostr.nip04.decrypt(otherPubkey, text)) as string;
+				return await window.nostr!.nip04.decrypt(otherPubkey, text);
 			}
 		},
 		async makeEvent(kind: number, content: string, tags: string[][]) {
@@ -148,18 +144,27 @@ public key: ${pubkey}`
 
 				return blankEvent;
 			} else {
-				// @ts-expect-error
-				return window.nostr.signEvent(blankEvent);
+				return window.nostr!.signEvent(blankEvent);
 			}
 		},
-		async signSchnorr(hash: Buffer) {
-			const privkey = get(store)?.privkey;
+		getSigner() {
+			const { pubkey, privkey } = get(store)!;
 
 			if (privkey) {
-				return ECPair.fromPrivateKey(Buffer.from(privkey, 'hex')).signSchnorr(hash);
-			} else {
-				// @ts-expect-error
-				return window.nostr.signSchnorr(hash) as Buffer;
+				const ecpair = ECPair.fromPrivateKey(Buffer.from(privkey, 'hex'), { network: NETWORK });
+
+				return ecpair;
+			} else if (pubkey) {
+				if (!window.nostr?.signSchnorr)
+					return alert("Your extension doesn't support signing") as undefined;
+
+				return {
+					publicKey: Buffer.from(pubkey),
+					sign: () => {
+						throw new Error('Signing without schnorr is not possible with the extension');
+					},
+					signSchnorr: window.nostr.signSchnorr
+				};
 			}
 		},
 		subscribe: store.subscribe

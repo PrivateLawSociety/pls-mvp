@@ -10,8 +10,8 @@
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
 	import type { PsbtMetadata } from '../shared';
-
-	let wifKey = '';
+	import { nostrAuth } from '$lib/nostr';
+	import { onMount } from 'svelte';
 
 	let utxos: UTXO[] | null = null;
 	let transactionsHex: string[] | null = null;
@@ -57,6 +57,10 @@
 		if (file) onFileSelected(file);
 	}
 
+	onMount(() => {
+		nostrAuth.tryLogin();
+	});
+
 	async function onFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
 
@@ -93,13 +97,23 @@
 			NETWORK
 		);
 
-		const myPubkey = ECPair.fromWIF(wifKey, NETWORK).publicKey;
+		const privkey = $nostrAuth?.privkey;
+		const pubkey = $nostrAuth?.pubkey;
+
+		if (!privkey)
+			return alert(
+				'Spend is currently only enabled if you specify your private key in the keygen area'
+			);
 
 		const possibleScripts = multisigScripts.filter(({ combination }) =>
-			combination.some((ecpair) => ecpair.publicKey.toString('hex') === myPubkey.toString('hex'))
+			combination.some((ecpair) => ecpair.publicKey.toString('hex') === '02' + pubkey)
 		);
 
 		generatedPSBTsMetadata = [];
+
+		const signer = nostrAuth.getSigner();
+
+		if (!signer) return;
 
 		for (const script of possibleScripts) {
 			const redeemOutput = script.leaf.output.toString('hex');
@@ -108,13 +122,15 @@
 				...generatedPSBTsMetadata,
 				{
 					redeemOutput,
-					psbtHex: startTxSpendingFromMultisig(
-						multisig,
-						redeemOutput,
-						ECPair.fromWIF(wifKey, NETWORK),
-						NETWORK,
-						receivingAddresses,
-						utxos
+					psbtHex: (
+						await startTxSpendingFromMultisig(
+							multisig,
+							redeemOutput,
+							signer,
+							NETWORK,
+							receivingAddresses,
+							utxos
+						)
 					).toHex(),
 					pubkeys: script.combination.map((ecpair) => ecpair.publicKey.toString('hex'))
 				}
@@ -170,11 +186,7 @@
 
 			<p>Network fee: {feeAmount}</p>
 
-			<LabelledInput type="text" label="Wif key (private key)" bind:value={wifKey} />
-
-			{#if wifKey}
-				<Button on:click={handleStartSpend}>Start spend</Button>
-			{/if}
+			<Button on:click={handleStartSpend}>Start spend</Button>
 		{/if}
 	{/if}
 </div>
