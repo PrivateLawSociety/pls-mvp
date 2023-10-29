@@ -97,13 +97,7 @@
 			NETWORK
 		);
 
-		const privkey = $nostrAuth?.privkey;
 		const pubkey = $nostrAuth?.pubkey;
-
-		if (!privkey)
-			return alert(
-				'Spend is currently only enabled if you specify your private key in the keygen area'
-			);
 
 		const possibleScripts = multisigScripts.filter(({ combination }) =>
 			combination.some((ecpair) => ecpair.publicKey.toString('hex') === '02' + pubkey)

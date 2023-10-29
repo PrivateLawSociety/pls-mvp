@@ -9,8 +9,6 @@ import {
 } from 'nostr-tools';
 import { get, writable } from 'svelte/store';
 import { ECPair, NETWORK } from './pls/multisig';
-import type { Signer } from 'bitcoinjs-lib';
-import type { SignerAsync } from 'ecpair';
 
 export const relayPool = new SimplePool();
 
@@ -159,11 +157,13 @@ public key: ${pubkey}`
 					return alert("Your extension doesn't support signing") as undefined;
 
 				return {
-					publicKey: Buffer.from(pubkey),
-					sign: () => {
+					publicKey: Buffer.from('02' + pubkey, 'hex'),
+					sign() {
 						throw new Error('Signing without schnorr is not possible with the extension');
 					},
-					signSchnorr: window.nostr.signSchnorr
+					async signSchnorr(hash: Buffer) {
+						return Buffer.from(await window.nostr!.signSchnorr(hash.toString('hex')), 'hex');
+					}
 				};
 			}
 		},

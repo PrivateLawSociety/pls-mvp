@@ -114,7 +114,7 @@ export async function startTxSpendingFromMultisig(
 
 	psbt.addOutputs(receivingAddresses);
 
-	await psbt.signAllInputsAsync(signer)
+	await psbt.signAllInputsAsync(signer);
 
 	return psbt;
 }

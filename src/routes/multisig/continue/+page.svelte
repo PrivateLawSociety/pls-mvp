@@ -48,13 +48,7 @@
 	async function handleApproveTransaction() {
 		if (!psbtsMetadata) return;
 
-		const privkey = $nostrAuth?.privkey;
 		const pubkey = $nostrAuth?.pubkey;
-
-		if (!privkey || !pubkey)
-			return alert(
-				'Spend is currently only enabled if you specify your private key in the keygen area'
-			);
 
 		const signer = nostrAuth.getSigner();
 

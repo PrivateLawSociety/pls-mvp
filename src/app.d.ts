@@ -11,7 +11,7 @@ declare global {
 	}
 	interface Window {
 		nostr?: {
-			signSchnorr(hash: Buffer): Promise<Buffer>;
+			signSchnorr(hash: string): Promise<string>;
 			getPublicKey(): Promise<string>;
 			signEvent(event: EventTemplate): Promise<Event>;
 			nip04: {
