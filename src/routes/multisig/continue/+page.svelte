@@ -3,9 +3,10 @@
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { Psbt } from 'bitcoinjs-lib';
-	import type { PsbtMetadata } from '../shared';
-	import { nostrAuth } from '$lib/nostr';
+	import { SpendRequestEvent, type PsbtMetadata, type SpendRequestPayload } from '../shared';
+	import { nostrAuth, relayList, relayPool } from '$lib/nostr';
 	import { onMount } from 'svelte';
+	import { hashFromFile } from '$lib/utils';
 
 	let psbtsMetadataStringified = '';
 
@@ -13,6 +14,14 @@
 
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 	let generatedTransactionHex: string | null = null;
+
+	let myFiles: FileList | undefined;
+
+	$: {
+		const file = myFiles?.item(0);
+
+		if (file) onFileSelected(file);
+	}
 
 	$: {
 		try {
@@ -30,6 +39,23 @@
 	onMount(() => {
 		nostrAuth.tryLogin();
 	});
+
+	async function onFileSelected(file: File) {
+		if (file && $nostrAuth?.pubkey) {
+			relayPool
+				.sub(relayList, [
+					{
+						kinds: [SpendRequestEvent],
+						'#h': [(await hashFromFile(file)).toString('hex')]
+					}
+				])
+				.on('event', async (e) => {
+					const { psbtsMetadata } = JSON.parse(e.content) as SpendRequestPayload;
+
+					psbtsMetadataStringified = JSON.stringify(psbtsMetadata);
+				});
+		}
+	}
 
 	// for security reasons, check if all PSBTs are equivalent before signing them
 	function areAllPsbtsEquivalent(psbtsMetadata: PsbtMetadata[]) {
@@ -120,9 +146,17 @@
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
-	{#if !generatedPSBTsMetadata}
+	{#if !generatedPSBTsMetadata && !psbtsMetadata}
 		<h1 class="text-3xl font-bold">Continue spend from multisig</h1>
 		<LabelledInput type="text" label="PSBT hex" bind:value={psbtsMetadataStringified} />
+		<p>or from nostr:</p>
+		<label class="flex items-center justify-center gap-2">
+			Contract data file:
+			<input type="file" bind:files={myFiles} />
+		</label>
+		{#if myFiles?.length !== 0}
+			<p>Waiting for a nostr event</p>
+		{/if}
 	{/if}
 
 	{#if generatedTransactionHex}

@@ -9,9 +9,10 @@
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
-	import type { PsbtMetadata } from '../shared';
-	import { nostrAuth } from '$lib/nostr';
+	import { SpendRequestEvent, type PsbtMetadata, type SpendRequestPayload } from '../shared';
+	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
+	import { hashFromFile } from '$lib/utils';
 
 	let utxos: UTXO[] | null = null;
 	let transactionsHex: string[] | null = null;
@@ -138,6 +139,24 @@
 		navigator.clipboard.writeText(JSON.stringify(generatedPSBTsMetadata));
 		setTimeout(() => alert('Copied to clipboard'), 0);
 	}
+
+	async function sendViaNostr() {
+		if (!generatedPSBTsMetadata) return;
+
+		const file = myFiles?.item(0);
+
+		if (!file) return;
+
+		const payload = JSON.stringify({
+			psbtsMetadata: generatedPSBTsMetadata
+		} as SpendRequestPayload);
+
+		const event = await nostrAuth.makeEvent(SpendRequestEvent, payload, [
+			['h', (await hashFromFile(file)).toString('hex')]
+		]);
+
+		broadcastToNostr(event);
+	}
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
@@ -147,6 +166,10 @@
 		<div class="flex items-end gap-2">
 			<LabelledInput type="text" label="PSBT" value={JSON.stringify(generatedPSBTsMetadata)} />
 			<Button on:click={copyToClipboard}>📋 Copy</Button>
+		</div>
+		<p>or</p>
+		<div class="flex items-end gap-2">
+			<Button on:click={sendViaNostr}>Send via nostr</Button>
 		</div>
 	{:else}
 		<h1 class="text-3xl font-bold">Start spend from multisig</h1>
