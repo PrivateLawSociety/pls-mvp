@@ -1,11 +1,12 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
-	import { broadcastToNostr, nostrAuth, nostrNowBasic, relayList, relayPool } from '$lib/nostr';
+	import { broadcastToNostr, getOldestEvent, nostrAuth, nostrNowBasic, relayList, relayPool } from '$lib/nostr';
 	import { hashFromFile, hashFromJSON } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import PersonChooser from '$lib/components/PersonChooser.svelte';
 	import { ContractRequestEvent, type ContractRequestPayload } from './shared';
 	import { peopleMetadata } from '$lib/stores';
+	import type { Event } from 'nostr-tools';
 
 	let myPubkey: string | null = null;
 
@@ -36,15 +37,17 @@
 	let newlySelectedPubkey: string | null = null;
 
 	async function getContactsInfo(pubkey: string) {
-		const value = await relayPool.get(relayList, {
+		const events = await relayPool.list(relayList, [{
 			authors: [pubkey],
 			kinds: [3],
 			until: nostrNowBasic()
-		});
+		}]);
 
-		if (!value) return;
+		if (!events) return;
 
-		const contacts = value.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+		const event = getOldestEvent(events)
+
+		const contacts = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
 
 		contactPubkeys = contacts;
 

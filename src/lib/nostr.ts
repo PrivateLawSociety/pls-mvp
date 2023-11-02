@@ -56,6 +56,14 @@ export function broadcastToNostr(event: Event) {
 	return relayPool.publish(relayList, event);
 }
 
+export function getOldestEvent(events: Event[]) {
+	const ascendingEvents = events.sort((a, b) => a.created_at - b.created_at);
+
+	const lastEvent = ascendingEvents[ascendingEvents.length - 1];
+
+	return lastEvent;
+}
+
 export let nostrAuth = (() => {
 	const store = writable<{ privkey?: string; pubkey: string } | null>();
 

@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { nostrNowBasic, relayList, relayPool } from './nostr';
+import { getOldestEvent, nostrNowBasic, relayList, relayPool } from './nostr';
 // import { utils} from "nostr-tools"
 // utils.insertEventIntoAscendingList()
 
@@ -19,11 +19,7 @@ async function getPerson(pubkey: string) {
 
 	if (events.length === 0) return null;
 
-	const ascendingEvents = events.sort((a, b) => a.created_at - b.created_at);
-
-	const lastEvent = ascendingEvents[ascendingEvents.length - 1];
-
-	return JSON.parse(lastEvent.content) as Person;
+	return JSON.parse(getOldestEvent(events).content) as Person;
 }
 
 export let peopleMetadata = (() => {
