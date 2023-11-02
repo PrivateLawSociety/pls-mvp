@@ -1,5 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { nostrNowBasic, relayList, relayPool } from './nostr';
+// import { utils} from "nostr-tools"
+// utils.insertEventIntoAscendingList()
 
 export interface Person {
 	picture?: string;
@@ -7,15 +9,21 @@ export interface Person {
 }
 
 async function getPerson(pubkey: string) {
-	const value = await relayPool.get(relayList, {
-		authors: [pubkey],
-		kinds: [0],
-		until: nostrNowBasic()
-	});
+	const events = await relayPool.batchedList('getPerson', relayList, [
+		{
+			authors: [pubkey],
+			kinds: [0],
+			until: nostrNowBasic()
+		}
+	]);
 
-	if (!value) return null;
+	if (events.length === 0) return null;
 
-	return JSON.parse(value.content) as Person;
+	const ascendingEvents = events.sort((a, b) => a.created_at - b.created_at);
+
+	const lastEvent = ascendingEvents[ascendingEvents.length - 1];
+
+	return JSON.parse(lastEvent.content) as Person;
 }
 
 export let peopleMetadata = (() => {

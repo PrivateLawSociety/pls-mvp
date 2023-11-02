@@ -20,7 +20,9 @@
 	let myFiles: FileList | undefined;
 	let myFileHash: string | undefined;
 
-	$: contactsAndMe = myPubkey ? [myPubkey, ...contactPubkeys] : contactPubkeys;
+	$: contactsAndMe = Array.from(
+		myPubkey ? new Set([myPubkey, ...contactPubkeys]) : new Set(contactPubkeys)
+	);
 
 	$: {
 		const file = myFiles?.item(0);
