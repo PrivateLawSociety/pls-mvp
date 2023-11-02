@@ -7,7 +7,6 @@
 	} from '$lib/pls/contract';
 	import { hashFromFile } from '$lib/utils';
 	import Person from '$lib/components/Person.svelte';
-	import { networks } from 'bitcoinjs-lib';
 
 	let contractDataFile: FileList | undefined;
 
@@ -44,17 +43,10 @@
 
 		return isValid;
 	}
-
-	// console.log('main:', ECPair.makeRandom({ network: networks.bitcoin }).publicKey.toString('hex'));
-	// console.log('test:', ECPair.makeRandom({ network: networks.bitcoin }).publicKey.toString('hex'));
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
 	<h1 class="text-3xl font-bold">Verify contract</h1>
-	<label class="flex items-center justify-center gap-2">
-		Contract data file:
-		<input type="file" bind:files={contractDataFile} />
-	</label>
 	{#if contractData}
 		<p>Multisig address: {contractData.multisigAddress}</p>
 
@@ -66,7 +58,7 @@
 					<Person {pubkey} />
 					<p>
 						<span class="text-2xl">{valid ? '✅' : '❌'}</span>
-						<span class="font-bold">{valid ? 'Valid' : 'Invalid'}</span>
+						<span class="font-bold">{valid ? 'Signed' : 'Invalid'}</span>
 					</p>
 				</div>
 			{/each}
@@ -99,5 +91,10 @@
 				<span class="font-bold">{valid ? 'matches' : `doesn't match`}</span>
 			</p>
 		{/if}
+	{:else}
+		<label class="flex items-center justify-center gap-2">
+			Contract data file:
+			<input type="file" bind:files={contractDataFile} />
+		</label>
 	{/if}
 </div>

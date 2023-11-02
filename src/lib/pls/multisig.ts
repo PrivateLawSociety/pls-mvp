@@ -15,7 +15,10 @@ export const ECPair = ECPairFactory(ecc);
 
 bitcoin.initEccLib(ecc);
 
-export const NETWORK = bitcoin.networks.testnet;
+export const NETWORK =
+	sessionStorage.getItem('network') === 'mainnet'
+		? bitcoin.networks.bitcoin
+		: bitcoin.networks.testnet;
 
 // Invalid point, there is not priv key to sign this, should be random
 export const H = Buffer.from(
