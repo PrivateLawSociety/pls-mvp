@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { ECPair } from '$lib/pls/multisig';
 	import {
 		tryParseFinishedContract,
 		type FinishedContractData,
@@ -7,6 +6,7 @@
 	} from '$lib/pls/contract';
 	import { hashFromFile } from '$lib/utils';
 	import Person from '$lib/components/Person.svelte';
+	import { ECPair } from '$lib/bitcoin';
 
 	let contractDataFile: FileList | undefined;
 

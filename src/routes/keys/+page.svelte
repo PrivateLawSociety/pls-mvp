@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { ECPair, NETWORK } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import type { ECPairInterface } from 'ecpair';
 	import { nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
+	import { ECPair, NETWORK } from '$lib/bitcoin';
 
 	let wifKey = $nostrAuth?.privkey ?? '';
 	let ecpair: ECPairInterface | null = null;

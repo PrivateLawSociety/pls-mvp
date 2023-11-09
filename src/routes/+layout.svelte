@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { NETWORK } from '$lib/pls/multisig';
-	import { networks } from 'bitcoinjs-lib';
 	import '../app.postcss';
+	import { isMainnet } from '$lib/bitcoin';
 
-	let network = NETWORK === networks.bitcoin ? 'mainnet' : 'testnet';
+	let network = isMainnet() ? 'mainnet' : 'testnet';
 </script>
 
 <div class="flex flex-col h-screen">

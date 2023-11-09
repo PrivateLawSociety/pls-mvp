@@ -1,11 +1,5 @@
 <script lang="ts">
-	import {
-		createMultisig,
-		ECPair,
-		NETWORK,
-		startTxSpendingFromMultisig,
-		type UTXO
-	} from '$lib/pls/multisig';
+	import { createMultisig, startTxSpendingFromMultisig } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
@@ -13,6 +7,8 @@
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { hashFromFile } from '$lib/utils';
+	import { getAddressUtxos, getTransactionHexFromId, type UTXO } from '$lib/mempool';
+	import { ECPair, NETWORK } from '$lib/bitcoin';
 
 	let utxos: UTXO[] | null = null;
 	let transactionsHex: string[] | null = null;
@@ -24,8 +20,6 @@
 	let addressQuantity = 1;
 
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
-
-	// let feeAmount = 0;
 
 	let receivingAddresses: {
 		address: string;
@@ -65,23 +59,17 @@
 	async function onFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
 
-		if (!contractData) return alert('File has an invalid format');
+		if (!contractData) {
+			return alert('File has an invalid format');
+		}
 
-		utxos = await (
-			await fetch(`https://mempool.space/testnet/api/address/${contractData.multisigAddress}/utxo`)
-		).json();
+		utxos = await getAddressUtxos(contractData.multisigAddress);
+
+		if (!utxos) return;
 
 		transactionsHex = await Promise.all(
-			utxos!.map(async (utxo) =>
-				(await fetch(`https://mempool.space/testnet/api/tx/${utxo.txid}/hex`)).text()
-			)
+			utxos.map(async (utxo) => (await getTransactionHexFromId(utxo.txid))!)
 		);
-
-		// const fees: { economyFee: number } = await (
-		// 	await fetch(`https://mempool.space/testnet/api/v1/fees/recommended`)
-		// ).json();
-
-		// feeAmount = fees.economyFee;
 	}
 
 	async function handleStartSpend() {

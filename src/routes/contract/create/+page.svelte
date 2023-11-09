@@ -1,6 +1,13 @@
 <script lang="ts">
 	import Button from '$lib/components/Button.svelte';
-	import { broadcastToNostr, getOldestEvent, nostrAuth, nostrNowBasic, relayList, relayPool } from '$lib/nostr';
+	import {
+		broadcastToNostr,
+		getOldestEvent,
+		nostrAuth,
+		nostrNowBasic,
+		relayList,
+		relayPool
+	} from '$lib/nostr';
 	import { hashFromFile, hashFromJSON } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import PersonChooser from '$lib/components/PersonChooser.svelte';
@@ -37,15 +44,17 @@
 	let newlySelectedPubkey: string | null = null;
 
 	async function getContactsInfo(pubkey: string) {
-		const events = await relayPool.list(relayList, [{
-			authors: [pubkey],
-			kinds: [3],
-			until: nostrNowBasic()
-		}]);
+		const events = await relayPool.list(relayList, [
+			{
+				authors: [pubkey],
+				kinds: [3],
+				until: nostrNowBasic()
+			}
+		]);
 
 		if (!events) return;
 
-		const event = getOldestEvent(events)
+		const event = getOldestEvent(events);
 
 		const contacts = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
 
@@ -66,9 +75,11 @@
 	});
 
 	async function requestSignatures() {
-		if (!myFileHash) return alert('please select a file')!;
-
 		if (!clients[0] || !clients[1]) return alert('Contracts need exactly 2 clients');
+
+		if (arbitrators.length === 0) return alert('Select at least one arbitrator');
+
+		if (!myFileHash) return alert('Please select a file')!;
 
 		const pubkeys = [clients[0], clients[1], ...arbitrators];
 

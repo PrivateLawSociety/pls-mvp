@@ -8,7 +8,7 @@ import {
 	nip04
 } from 'nostr-tools';
 import { get, writable } from 'svelte/store';
-import { ECPair, NETWORK } from './pls/multisig';
+import { ECPair, NETWORK } from './bitcoin';
 
 export const relayPool = new SimplePool();
 

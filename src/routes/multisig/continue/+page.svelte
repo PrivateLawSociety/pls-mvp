@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { NETWORK } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { Psbt } from 'bitcoinjs-lib';
@@ -7,6 +6,8 @@
 	import { nostrAuth, relayList, relayPool } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { hashFromFile } from '$lib/utils';
+	import { publishTransaction } from '$lib/mempool';
+	import { NETWORK } from '$lib/bitcoin';
 
 	let psbtsMetadataStringified = '';
 
@@ -121,27 +122,10 @@
 		setTimeout(() => alert('Copied to clipboard'), 0);
 	}
 
-	async function publishTransaction() {
+	async function publish() {
 		if (!generatedTransactionHex) return;
 
-		try {
-			const req = await fetch('https://mempool.space/testnet/api/tx', {
-				method: 'POST',
-				body: generatedTransactionHex
-			});
-
-			const text = await req.text();
-
-			if (req.status === 200) {
-				alert(`Transaction published! TxId: ${text}`);
-			} else {
-				alert(`Error: ${text}`);
-			}
-		} catch (error) {
-			alert(
-				'Error while publishing! Try disabling your adblocker/tracker blocker or try using another browser'
-			);
-		}
+		publishTransaction(generatedTransactionHex);
 	}
 </script>
 
@@ -161,7 +145,7 @@
 
 	{#if generatedTransactionHex}
 		<h1 class="text-3xl">Transaction created</h1>
-		<Button on:click={publishTransaction}>🚀 Publish</Button>
+		<Button on:click={publish}>🚀 Publish</Button>
 		<Button on:click={copyTransactionToClipboard}>📋 Copy</Button>
 	{:else if generatedPSBTsMetadata}
 		<h1 class="text-3xl">PSBT created</h1>

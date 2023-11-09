@@ -1,24 +1,9 @@
-import * as bitcoin from 'bitcoinjs-lib';
-import ECPairFactory, { type ECPairInterface } from 'ecpair';
-import * as ecc from 'tiny-secp256k1';
 import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
 import type { Taptree } from 'bitcoinjs-lib/src/types';
 import { sortScriptsIntoTree } from '../huffman';
-
-export interface UTXO {
-	txid: string;
-	vout: number;
-	value: number;
-}
-
-export const ECPair = ECPairFactory(ecc);
-
-bitcoin.initEccLib(ecc);
-
-export const NETWORK =
-	sessionStorage.getItem('network') === 'mainnet'
-		? bitcoin.networks.bitcoin
-		: bitcoin.networks.testnet;
+import type { UTXO } from '$lib/mempool';
+import type { ECPairInterface } from 'ecpair';
+import { script, type Network, payments, type SignerAsync, type Signer, Psbt } from 'bitcoinjs-lib';
 
 // Invalid point, there is not priv key to sign this, should be random
 export const H = Buffer.from(
@@ -41,7 +26,7 @@ export function createMultisig(
 	publicPartsECPairs: ECPairInterface[],
 	publicArbitratorsECPairs: ECPairInterface[],
 	arbitratorsQuorum: number,
-	network: bitcoin.Network
+	network: Network
 ) {
 	const eachChildNodeWithArbitratorsQuorum = publicPartsECPairs
 		.map((p) => combine(publicArbitratorsECPairs, arbitratorsQuorum).map((a) => [p, ...a]))
@@ -59,14 +44,14 @@ export function createMultisig(
 		return {
 			// when building Taptree, prioritize parts agreement script (shortest path), using 1 for parts script and 5 for scripts with arbitrators
 			weight: idx ? 1 : 5,
-			leaf: { output: bitcoin.script.fromASM(ma) },
+			leaf: { output: script.fromASM(ma) },
 			combination: childNodesCombinations[idx]
 		};
 	});
 
 	const scriptTree: Taptree = sortScriptsIntoTree(multisigScripts)!;
 
-	const multisig = bitcoin.payments.p2tr({
+	const multisig = payments.p2tr({
 		internalPubkey: toXOnly(H),
 		scriptTree,
 		network
@@ -76,10 +61,10 @@ export function createMultisig(
 }
 
 export async function startTxSpendingFromMultisig(
-	multisig: bitcoin.payments.Payment,
+	multisig: payments.Payment,
 	redeemOutput: string,
-	signer: bitcoin.Signer | bitcoin.SignerAsync,
-	network: bitcoin.Network,
+	signer: Signer | SignerAsync,
+	network: Network,
 	receivingAddresses: {
 		address: string;
 		value: number;
@@ -91,7 +76,7 @@ export async function startTxSpendingFromMultisig(
 		redeemVersion: 192
 	};
 
-	const multisigP2tr = bitcoin.payments.p2tr({
+	const multisigP2tr = payments.p2tr({
 		internalPubkey: toXOnly(H),
 		scriptTree: multisig.scriptTree,
 		redeem: multisigRedeem,
@@ -104,7 +89,7 @@ export async function startTxSpendingFromMultisig(
 		controlBlock: multisigP2tr.witness![multisigP2tr.witness!.length - 1]
 	};
 
-	const psbt = new bitcoin.Psbt({ network });
+	const psbt = new Psbt({ network });
 
 	psbt.addInputs(
 		utxos.map((utxo) => ({
