@@ -1,7 +1,5 @@
 import { get, writable } from 'svelte/store';
 import { getOldestEvent, nostrNowBasic, relayList, relayPool } from './nostr';
-// import { utils} from "nostr-tools"
-// utils.insertEventIntoAscendingList()
 
 export interface Person {
 	picture?: string;
@@ -47,3 +45,5 @@ export let peopleMetadata = (() => {
 		}
 	};
 })();
+
+export let contractDataFileStore = writable<File | null>(null)

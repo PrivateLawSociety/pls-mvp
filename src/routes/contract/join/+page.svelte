@@ -11,7 +11,9 @@
 	import Button from '$lib/components/Button.svelte';
 	import Person from '$lib/components/Person.svelte';
 	import { hashFromFile } from '$lib/utils';
-	import { ECPair, NETWORK, createMultisig } from '$lib/pls/multisig';
+	import { createMultisig } from '$lib/pls/multisig';
+	import { ECPair, NETWORK } from '$lib/bitcoin';
+	import FileDrop from '$lib/components/FileDrop.svelte';
 
 	let contractsData: Record<string, PartialContract> = {};
 
@@ -150,7 +152,7 @@
 	}
 </script>
 
-<div class="flex justify-center">
+<div class="flex justify-center items-center h-full">
 	<div class="flex flex-col gap-4 w-1/2">
 		{#each Object.values(contractsData) as data}
 			<p>Involved clients:</p>
@@ -183,7 +185,7 @@
 			</div>
 			<p>{data.arbitratorsQuorum} arbitrators need to agree</p>
 
-			<p>Contract text: <input type="file" bind:files={myFiles} /></p>
+			<FileDrop dropText={'Drop contract text here'} bind:files={myFiles} />
 
 			{#if data.fileHash === myFileHash}
 				{#key contractSignatures}
@@ -202,6 +204,10 @@
 					<Button on:click={() => exportContract(data.fileHash)}>Export contract</Button>
 				{/if}
 			{/key}
+		{:else}
+			<div class="flex justify-center">
+				<p>You have no pending contract requests</p>
+			</div>
 		{/each}
 	</div>
 </div>

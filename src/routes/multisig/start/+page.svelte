@@ -9,6 +9,8 @@
 	import { hashFromFile } from '$lib/utils';
 	import { getAddressUtxos, getTransactionHexFromId, type UTXO } from '$lib/mempool';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
+	import { contractDataFileStore } from '$lib/stores';
+	import FileDrop from '$lib/components/FileDrop.svelte';
 
 	let utxos: UTXO[] | null = null;
 	let transactionsHex: string[] | null = null;
@@ -26,11 +28,11 @@
 		value: number;
 	}[] = [];
 
-	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0);
+	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
 
-	$: feeAmount = availableBalance
-		? availableBalance - receivingAddresses.reduce((acc, cv) => acc + cv.value, 0)
-		: null;
+	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0) ?? 0;
+
+	$: feeAmount = availableBalance - receivingAddresses.reduce((acc, cv) => acc + cv.value, 0);
 
 	$: if (receivingAddresses.length < addressQuantity) {
 		receivingAddresses = [
@@ -160,11 +162,7 @@
 			<Button on:click={sendViaNostr}>Send via nostr</Button>
 		</div>
 	{:else}
-		<h1 class="text-3xl font-bold">Start spend from multisig</h1>
-		<label class="flex items-center justify-center gap-2">
-			Contract data file:
-			<input type="file" bind:files={myFiles} />
-		</label>
+		<h1 class="text-3xl font-bold">Start withdraw from contract</h1>
 
 		{#if contractData}
 			<p class="text-xl">
@@ -192,6 +190,8 @@
 			<p>Network fee: {feeAmount}</p>
 
 			<Button on:click={handleStartSpend}>Start spend</Button>
+		{:else}
+			<FileDrop dropText={'Drop contract data here'} bind:files={myFiles} />
 		{/if}
 	{/if}
 </div>

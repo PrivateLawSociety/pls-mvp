@@ -8,6 +8,8 @@
 	import { hashFromFile } from '$lib/utils';
 	import { publishTransaction } from '$lib/mempool';
 	import { NETWORK } from '$lib/bitcoin';
+	import { contractDataFileStore } from '$lib/stores';
+	import FileDrop from '$lib/components/FileDrop.svelte';
 
 	let psbtsMetadataStringified = '';
 
@@ -17,6 +19,8 @@
 	let generatedTransactionHex: string | null = null;
 
 	let myFiles: FileList | undefined;
+
+	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
 
 	$: {
 		const file = myFiles?.item(0);
@@ -133,12 +137,10 @@
 	{#if !generatedPSBTsMetadata && !psbtsMetadata}
 		<h1 class="text-3xl font-bold">Continue spend from multisig</h1>
 		<LabelledInput type="text" label="PSBT hex" bind:value={psbtsMetadataStringified} />
-		<p>or from nostr:</p>
-		<label class="flex items-center justify-center gap-2">
-			Contract data file:
-			<input type="file" bind:files={myFiles} />
-		</label>
-		{#if myFiles?.length !== 0}
+		{#if !myFiles?.length && !$contractDataFileStore}
+			<p>or from nostr:</p>
+			<FileDrop dropText={'Drop contract data here'} bind:files={myFiles} />
+		{:else}
 			<p>Waiting for a nostr event</p>
 		{/if}
 	{/if}

@@ -8,12 +8,12 @@
 		relayList,
 		relayPool
 	} from '$lib/nostr';
-	import { hashFromFile, hashFromJSON } from '$lib/utils';
+	import { hashFromFile } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import PersonChooser from '$lib/components/PersonChooser.svelte';
 	import { ContractRequestEvent, type ContractRequestPayload } from './shared';
 	import { peopleMetadata } from '$lib/stores';
-	import type { Event } from 'nostr-tools';
+	import FileDrop from '$lib/components/FileDrop.svelte';
 
 	let myPubkey: string | null = null;
 
@@ -109,6 +109,7 @@
 				<PersonChooser people={contactsAndMe} bind:selectedPerson={clients[1]} />
 			</div>
 		</div>
+
 		<div>
 			<span>Arbitrators ({arbitrators.length})</span>
 			<div class="flex gap-4">
@@ -144,7 +145,8 @@
 				max={arbitrators.length}
 			/>
 		</label>
-		<p>Contract file: <input type="file" bind:files={myFiles} /></p>
+
+		<FileDrop dropText={'Drop contract text here'} bind:files={myFiles} />
 		<Button on:click={requestSignatures}>Request signatures</Button>
 	</div>
 </div>
