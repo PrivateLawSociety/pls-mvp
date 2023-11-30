@@ -96,7 +96,6 @@
 			{quorum}
 			{quorum == 1 ? 'arbitrator' : 'arbitrators'} constitute{quorum == 1 ? 's' : ''} a decision
 		</p>
-		<p class="break-all">Multisig address: {contractData.multisigAddress}</p>
 
 		{@const valid = contractData.fileHash === contractTextHash}
 		{#if !contractTextHash || !valid}
@@ -109,6 +108,12 @@
 				<span class="font-bold">{valid ? 'matches' : `doesn't match`}</span>
 			</p>
 		{/if}
+
+		<div class="flex gap-4">
+			<a href="/multisig/deposit">
+				<Button>Deposit collateral</Button>
+			</a>
+		</div>
 
 		<div class="flex gap-4">
 			<a href="/multisig/start">
