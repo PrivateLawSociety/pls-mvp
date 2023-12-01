@@ -28,6 +28,8 @@
 		value: number;
 	}[] = [];
 
+	let timelockDays: number | undefined = undefined;
+
 	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
 
 	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0) ?? 0;
@@ -103,20 +105,24 @@
 		for (const script of possibleScripts) {
 			const redeemOutput = script.leaf.output.toString('hex');
 
+			const unixNow = Math.floor(Date.now() / 1000);
+			const oneDayInSeconds = 60 * 60 * 24;
+
+			const psbt = await startTxSpendingFromMultisig(
+				multisig,
+				redeemOutput,
+				signer,
+				NETWORK,
+				receivingAddresses,
+				utxos,
+				timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
+			);
+
 			generatedPSBTsMetadata = [
 				...generatedPSBTsMetadata,
 				{
 					redeemOutput,
-					psbtHex: (
-						await startTxSpendingFromMultisig(
-							multisig,
-							redeemOutput,
-							signer,
-							NETWORK,
-							receivingAddresses,
-							utxos
-						)
-					).toHex(),
+					psbtHex: psbt.toHex(),
 					pubkeys: script.combination.map((ecpair) => ecpair.publicKey.toString('hex'))
 				}
 			];
@@ -170,6 +176,15 @@
 					? 'Loading...'
 					: `${availableBalance} sats`}
 			</p>
+			{#if timelockDays === undefined}
+				<Button on:click={() => (timelockDays = 90)}>Add timelock</Button>
+			{:else}
+				<LabelledInput
+					type="number"
+					label="Days until the timelock's unlocked"
+					bind:value={timelockDays}
+				/>
+			{/if}
 			<LabelledInput
 				type="number"
 				label="How many addresses will receive?"

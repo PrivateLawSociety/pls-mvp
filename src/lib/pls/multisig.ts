@@ -69,7 +69,8 @@ export async function startTxSpendingFromMultisig(
 		address: string;
 		value: number;
 	}[],
-	utxos: UTXO[]
+	utxos: UTXO[],
+	locktime?: number
 ) {
 	const multisigRedeem = {
 		output: Buffer.from(redeemOutput, 'hex'),
@@ -99,6 +100,13 @@ export async function startTxSpendingFromMultisig(
 			tapLeafScript: [tapLeafScript]
 		}))
 	);
+
+	if (locktime) {
+		psbt.setLocktime(locktime);
+		psbt.txInputs.forEach((_, i) => 
+			psbt.setInputSequence(i, 0)
+		);
+	}
 
 	psbt.addOutputs(receivingAddresses);
 

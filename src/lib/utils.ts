@@ -48,3 +48,19 @@ function hashFromArrayBuffer(arrayBuffer: ArrayBuffer) {
 export async function hashFromFile(file: File) {
 	return hashFromArrayBuffer(await file.arrayBuffer());
 }
+
+export function formatDateTime(date: Date) {
+	const hourTime = new Intl.DateTimeFormat('default', {
+		hour: 'numeric',
+		minute: 'numeric',
+		second: 'numeric'
+	}).format(date);
+
+	const dateTime = new Intl.DateTimeFormat('default', {
+		year: 'numeric',
+		month: 'numeric',
+		day: 'numeric'
+	}).format(date);
+
+	return `${dateTime} - ${hourTime}`;
+}

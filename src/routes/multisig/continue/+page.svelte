@@ -5,7 +5,7 @@
 	import { SpendRequestEvent, type PsbtMetadata, type SpendRequestPayload } from '../shared';
 	import { nostrAuth, relayList, relayPool } from '$lib/nostr';
 	import { onMount } from 'svelte';
-	import { hashFromFile } from '$lib/utils';
+	import { formatDateTime, hashFromFile } from '$lib/utils';
 	import { publishTransaction } from '$lib/mempool';
 	import { NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
@@ -27,6 +27,8 @@
 
 		if (file) onFileSelected(file);
 	}
+
+	let transactionLocktime: number | null = null;
 
 	$: {
 		try {
@@ -108,6 +110,8 @@
 
 			const tx = psbt.extractTransaction();
 
+			if (tx.locktime !== 0) transactionLocktime = tx.locktime;
+
 			generatedTransactionHex = tx.toHex();
 		}
 	}
@@ -147,6 +151,7 @@
 
 	{#if generatedTransactionHex}
 		<h1 class="text-3xl">Transaction created</h1>
+		<!-- TODO: don't show this button if transaction has timelock -->
 		<Button on:click={publish}>🚀 Publish</Button>
 		<Button on:click={copyTransactionToClipboard}>📋 Copy</Button>
 	{:else if generatedPSBTsMetadata}
@@ -155,9 +160,13 @@
 		<Button on:click={copyPsbtsToClipboard}>📋 Copy</Button>
 	{:else if psbtsMetadata}
 		<!-- it's safe to get only the first one because we already checked that all PSBTs are equivalent -->
-		{#each Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK }).txOutputs as output}
+		{@const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK })}
+		{#each psbt.txOutputs as output}
 			<p>{output.address} receives {output.value}</p>
 		{/each}
+		{#if psbt.locktime !== 0}
+			<p>timelock: {formatDateTime(new Date(psbt.locktime * 1000))}</p>
+		{/if}
 		<Button on:click={handleApproveTransaction}>Approve transaction</Button>
 	{:else if psbtsMetadataStringified != ''}
 		<p>Invalid PSBT</p>
