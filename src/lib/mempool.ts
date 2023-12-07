@@ -31,17 +31,34 @@ export async function getAddressUtxos(address: string) {
 	}
 }
 
-export async function getTransactionHexFromId(txid: string) {
+export async function getAddressUnconfirmedTxs(address: string) {
 	try {
-		const res = await fetch(`${MEMPOOL_API_URL}/tx/${txid}/hex`);
+		const res = await fetch(`${MEMPOOL_API_URL}/address/${address}/txs/mempool`);
 
 		if (!res.ok) {
 			console.log(res);
+			const text = await res.text();
+			if (text == 'Address on invalid network') {
+				alert('Contract is on the wrong network (testnet vs mainnet)');
+			}
 			return null;
 		}
 
-		return res.text();
+		return (await res.json()) as {
+			txid: string;
+			vin: {
+				txid: string;
+				vout: number;
+				prevout: {
+					value: number;
+				};
+				sequence: number;
+			}[];
+		}[];
 	} catch (error) {
+		alert(
+			`Couldn't connect to mempool.space. Try disabling your adblocker or try using another browser`
+		);
 		console.log(error);
 		return null;
 	}

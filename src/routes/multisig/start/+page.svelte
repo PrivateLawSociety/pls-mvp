@@ -7,26 +7,28 @@
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { hashFromFile } from '$lib/utils';
-	import { getAddressUtxos, getTransactionHexFromId, type UTXO } from '$lib/mempool';
+	import { getAddressUnconfirmedTxs, getAddressUtxos, type UTXO } from '$lib/mempool';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
 	import FileDrop from '$lib/components/FileDrop.svelte';
 
 	let utxos: UTXO[] | null = null;
-	let transactionsHex: string[] | null = null;
 
 	let contractData: FinishedContractData | null = null;
 
 	let myFiles: FileList | undefined;
 
-	let addressQuantity = 1;
-
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 
-	let receivingAddresses: {
+	let addresses: {
 		address: string;
 		value: number;
-	}[] = [];
+	}[] = [
+		{
+			address: '',
+			value: 0
+		}
+	];
 
 	let timelockDays: number | undefined = undefined;
 
@@ -34,26 +36,27 @@
 
 	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0) ?? 0;
 
-	$: feeAmount = availableBalance - receivingAddresses.reduce((acc, cv) => acc + cv.value, 0);
-
-	$: if (receivingAddresses.length < addressQuantity) {
-		receivingAddresses = [
-			...receivingAddresses,
-			{
-				address: '',
-				value: 0
-			}
-		];
-	}
-
-	$: if (receivingAddresses.length > addressQuantity) {
-		receivingAddresses = receivingAddresses.filter((_, i) => i !== receivingAddresses.length - 1);
-	}
+	$: feeAmount = availableBalance - addresses.reduce((acc, cv) => acc + cv.value, 0);
 
 	$: {
 		const file = myFiles?.item(0);
 
 		if (file) onFileSelected(file);
+	}
+
+	$: addresses = addresses.filter(({ address }, i) => {
+		if (i === addresses.length - 1) return true; // keep last address empty
+		else return address.trim() !== ''; // remove every other address
+	});
+
+	$: if (addresses[addresses.length - 1].address.trim() !== '') {
+		addresses = [
+			...addresses,
+			{
+				address: '',
+				value: 0
+			}
+		];
 	}
 
 	onMount(() => {
@@ -69,15 +72,27 @@
 
 		utxos = await getAddressUtxos(contractData.multisigAddress);
 
-		if (!utxos) return;
+		const unconfirmedTxs = await getAddressUnconfirmedTxs(contractData.multisigAddress);
 
-		transactionsHex = await Promise.all(
-			utxos.map(async (utxo) => (await getTransactionHexFromId(utxo.txid))!)
+		if (!unconfirmedTxs) return;
+
+		const unconfirmedUtxos: UTXO[] = [];
+
+		unconfirmedTxs.forEach((tx) =>
+			tx.vin.forEach((vin) =>
+				unconfirmedUtxos.push({
+					txid: vin.txid,
+					value: vin.prevout.value,
+					vout: vin.vout
+				})
+			)
 		);
+
+		utxos = [...(utxos ?? []), ...unconfirmedUtxos];
 	}
 
 	async function handleStartSpend() {
-		if (!contractData || !utxos || !transactionsHex) return alert("UTXOs haven't loaded yet");
+		if (!contractData || !utxos) return alert("UTXOs haven't loaded yet");
 
 		const { multisig, multisigScripts } = createMultisig(
 			contractData.clientPubkeys.map((pubkey) =>
@@ -113,7 +128,7 @@
 				redeemOutput,
 				signer,
 				NETWORK,
-				receivingAddresses,
+				addresses.filter(({ address }) => address.trim() !== ''),
 				utxos,
 				timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
 			);
@@ -185,24 +200,19 @@
 					bind:value={timelockDays}
 				/>
 			{/if}
-			<LabelledInput
-				type="number"
-				label="How many addresses will receive?"
-				bind:value={addressQuantity}
-			/>
 
-			{#each receivingAddresses as _, i}
+			{#each addresses as _, i}
 				<div class="flex gap-4">
 					<LabelledInput
 						type="text"
 						label="{i + 1}º receiving address"
-						bind:value={receivingAddresses[i].address}
+						bind:value={addresses[i].address}
 					/>
-					<LabelledInput type="number" label="Amount" bind:value={receivingAddresses[i].value} />
+					<LabelledInput type="number" label="Amount" bind:value={addresses[i].value} />
 				</div>
 			{/each}
 
-			<p>Network fee: {feeAmount}</p>
+			<p>Network fee: {feeAmount} sats</p>
 
 			<Button on:click={handleStartSpend}>Start spend</Button>
 		{:else}
