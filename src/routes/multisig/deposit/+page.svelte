@@ -14,7 +14,7 @@
 	}
 
 	function qrToImgTag(str: string) {
-		const qr = qrcode(8, 'H');
+		const qr = qrcode(12, 'H');
 
 		qr.addData(str);
 		qr.make();

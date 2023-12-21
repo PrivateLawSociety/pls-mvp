@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createMultisig, startTxSpendingFromMultisig } from '$lib/pls/multisig';
+	import { createBitcoinMultisig, startTxSpendingFromMultisig } from '$lib/pls/multisig';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
@@ -7,12 +7,22 @@
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { hashFromFile } from '$lib/utils';
-	import { getAddressUnconfirmedTxs, getAddressUtxos, type UTXO } from '$lib/mempool';
+	import {
+		getAddressUnconfirmedTxs,
+		getAddressUtxos,
+		getTransactionHexFromId,
+		type UTXO
+	} from '$lib/mempool';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
 	import FileDrop from '$lib/components/FileDrop.svelte';
+	import {
+		createLiquidMultisig,
+		getUnblindedUtxoValue,
+		startSpendFromLiquidMultisig
+	} from '$lib/liquid';
 
-	let utxos: UTXO[] | null = null;
+	let utxos: (UTXO & { hex?: string })[] | null = null;
 
 	let contractData: FinishedContractData | null = null;
 
@@ -46,7 +56,7 @@
 
 	$: addresses = addresses.filter(({ address }, i) => {
 		if (i === addresses.length - 1) return true; // keep last address empty
-		else return address.trim() !== ''; // remove every other address
+		else return address.trim() !== ''; // remove every empty address
 	});
 
 	$: if (addresses[addresses.length - 1].address.trim() !== '') {
@@ -72,75 +82,138 @@
 
 		utxos = await getAddressUtxos(contractData.multisigAddress);
 
-		const unconfirmedTxs = await getAddressUnconfirmedTxs(contractData.multisigAddress);
+		if (NETWORK.isLiquid && utxos) {
+			const txHexes = await Promise.all(utxos.map((utxo) => getTransactionHexFromId(utxo.txid)));
 
-		if (!unconfirmedTxs) return;
+			utxos = utxos.reduce((acc, utxo, i) => {
+				const hex = txHexes[i];
 
-		const unconfirmedUtxos: UTXO[] = [];
+				if (hex) {
+					const value = getUnblindedUtxoValue(
+						{
+							...utxo,
+							hex: hex!
+						},
+						i
+					);
 
-		unconfirmedTxs.forEach((tx) =>
-			tx.vin.forEach((vin) =>
-				unconfirmedUtxos.push({
-					txid: vin.txid,
-					value: vin.prevout.value,
-					vout: vin.vout
-				})
-			)
-		);
+					if (value)
+						acc.push({
+							...utxo,
+							hex,
+							value
+						});
+				}
 
-		utxos = [...(utxos ?? []), ...unconfirmedUtxos];
+				return acc;
+			}, [] as (UTXO & { hex: string; value: number })[]);
+		} else {
+			const unconfirmedTxs = await getAddressUnconfirmedTxs(contractData.multisigAddress);
+
+			if (!unconfirmedTxs) return;
+
+			const unconfirmedUtxos: UTXO[] = [];
+
+			unconfirmedTxs.forEach((tx) =>
+				tx.vin.forEach((vin) =>
+					unconfirmedUtxos.push({
+						txid: vin.txid,
+						value: vin.prevout.value,
+						vout: vin.vout
+					})
+				)
+			);
+
+			utxos = [...(utxos ?? []), ...unconfirmedUtxos];
+		}
 	}
 
 	async function handleStartSpend() {
 		if (!contractData || !utxos) return alert("UTXOs haven't loaded yet");
 
-		const { multisig, multisigScripts } = createMultisig(
-			contractData.clientPubkeys.map((pubkey) =>
-				ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK })
-			),
-			contractData.arbitratorPubkeys.map((pubkey) =>
-				ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK })
-			),
-			contractData.arbitratorsQuorum,
-			NETWORK
-		);
-
-		const pubkey = $nostrAuth?.pubkey;
-
-		const possibleScripts = multisigScripts.filter(({ combination }) =>
-			combination.some((ecpair) => ecpair.publicKey.toString('hex') === '02' + pubkey)
-		);
-
-		generatedPSBTsMetadata = [];
-
 		const signer = nostrAuth.getSigner();
 
 		if (!signer) return;
 
-		for (const script of possibleScripts) {
-			const redeemOutput = script.leaf.output.toString('hex');
-
-			const unixNow = Math.floor(Date.now() / 1000);
-			const oneDayInSeconds = 60 * 60 * 24;
-
-			const psbt = await startTxSpendingFromMultisig(
-				multisig,
-				redeemOutput,
-				signer,
-				NETWORK,
-				addresses.filter(({ address }) => address.trim() !== ''),
-				utxos,
-				timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
+		if (NETWORK.isLiquid) {
+			const multisig = createLiquidMultisig(
+				contractData.clientPubkeys,
+				contractData.arbitratorPubkeys,
+				contractData.arbitratorsQuorum,
+				NETWORK.network
 			);
 
+			// const unixNow = Math.floor(Date.now() / 1000);
+			// const oneDayInSeconds = 60 * 60 * 24;
+
+			const psbt = await startSpendFromLiquidMultisig(
+				multisig,
+				utxos.map((utxo) => ({
+					...utxo,
+					hex: utxo.hex!
+				})),
+				NETWORK.network,
+				signer,
+				addresses.filter(({ address }) => address.trim() !== '')
+				// timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
+			);
+
+			if (!psbt) return alert("couldn't generate PSETs");
+
+			generatedPSBTsMetadata = [];
+
 			generatedPSBTsMetadata = [
-				...generatedPSBTsMetadata,
 				{
-					redeemOutput,
-					psbtHex: psbt.toHex(),
-					pubkeys: script.combination.map((ecpair) => ecpair.publicKey.toString('hex'))
+					redeemOutput: '',
+					psbtHex: psbt.toBuffer().toString('hex'),
+					pubkeys: []
 				}
 			];
+		} else {
+			const { multisig, multisigScripts } = createBitcoinMultisig(
+				contractData.clientPubkeys.map((pubkey) =>
+					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK.network })
+				),
+				contractData.arbitratorPubkeys.map((pubkey) =>
+					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK.network })
+				),
+				contractData.arbitratorsQuorum,
+				NETWORK.network
+			);
+
+			const pubkey = $nostrAuth?.pubkey;
+
+			const possibleScripts = multisigScripts.filter(({ combination }) =>
+				combination.some((ecpair) => ecpair.publicKey.toString('hex') === '02' + pubkey)
+			);
+
+			generatedPSBTsMetadata = [];
+
+			for (const script of possibleScripts) {
+				const redeemOutput = script.leaf.output.toString('hex');
+
+				const unixNow = Math.floor(Date.now() / 1000);
+				const oneDayInSeconds = 60 * 60 * 24;
+
+				const psbt = await startTxSpendingFromMultisig(
+					multisig,
+					redeemOutput,
+					signer,
+					NETWORK.network,
+					addresses.filter(({ address }) => address.trim() !== ''),
+					utxos,
+					timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
+				);
+
+				generatedPSBTsMetadata = [
+					...generatedPSBTsMetadata,
+					{
+						redeemOutput,
+						psbtHex: psbt.toHex(),
+						pubkeys: script.combination.map((ecpair) => ecpair.publicKey.toString('hex'))
+					}
+				];
+			}
 		}
 	}
 

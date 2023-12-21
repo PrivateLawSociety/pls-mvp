@@ -13,11 +13,11 @@
 
 	$: {
 		try {
-			ecpair = ECPair.fromWIF(wifKey, NETWORK);
+			ecpair = ECPair.fromWIF(wifKey, NETWORK.network);
 			nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
 		} catch (error) {
 			try {
-				ecpair = ECPair.fromPrivateKey(Buffer.from(wifKey, 'hex'), { network: NETWORK });
+				ecpair = ECPair.fromPrivateKey(Buffer.from(wifKey, 'hex'), { network: NETWORK.network });
 				nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
 			} catch (error) {}
 		}
@@ -29,7 +29,7 @@
 
 	function handleGenerateKeypair() {
 		ecpair = ECPair.makeRandom({
-			network: NETWORK
+			network: NETWORK.network
 		});
 
 		wifKey = ecpair.toWIF();

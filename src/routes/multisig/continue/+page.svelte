@@ -7,9 +7,17 @@
 	import { onMount } from 'svelte';
 	import { formatDateTime, hashFromFile } from '$lib/utils';
 	import { publishTransaction } from '$lib/mempool';
-	import { NETWORK } from '$lib/bitcoin';
+	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
 	import FileDrop from '$lib/components/FileDrop.svelte';
+	import { Pset, address } from 'liquidjs-lib';
+	import {
+		createLiquidMultisig,
+		finalizeTxSpendingFromLiquidMultisig,
+		getTapscriptSigsOrdered,
+		signTaprootTransaction
+	} from '$lib/liquid';
+	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
 
 	let psbtsMetadataStringified = '';
 
@@ -17,6 +25,8 @@
 
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 	let generatedTransactionHex: string | null = null;
+
+	let contractData: FinishedContractData | null = null;
 
 	let myFiles: FileList | undefined;
 
@@ -28,11 +38,59 @@
 		if (file) onFileSelected(file);
 	}
 
+	$: userShownData = getUserShownData(psbtsMetadata);
+
+	$: console.log(userShownData);
+
+	function getUserShownData(_: any) {
+		console.log('a', psbtsMetadata);
+		if (!psbtsMetadata) return null;
+		console.log('b');
+
+		if (NETWORK.isLiquid) {
+			const pset = Pset.fromBuffer(Buffer.from(psbtsMetadata[0].psbtHex, 'hex'));
+			console.log('c');
+
+			console.log(pset.outputs);
+
+			const network = NETWORK.network;
+
+			const blindingKeypair = ECPair.fromPrivateKey(
+				Buffer.from('0000000000000000000000000000000000000000000000000000000000000001', 'hex')
+			);
+
+			return {
+				outputs: pset.outputs
+					.filter(({ script }) => script?.length !== 0)
+					.map(({ value, script, blindingPubkey }) => {
+						const addresss = address.fromOutputScript(script!, network);
+
+						console.log(address.toConfidential(addresss, blindingPubkey!));
+
+						return {
+							value,
+							address: address.toConfidential(addresss, blindingPubkey!)
+						};
+					}),
+				locktime: pset.locktime()
+			};
+		} else {
+			const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK.network });
+
+			return {
+				outputs: psbt.txOutputs,
+				locktime: psbt.locktime
+			};
+		}
+	}
+
 	let transactionLocktime: number | null = null;
 
 	$: {
 		try {
 			psbtsMetadata = JSON.parse(psbtsMetadataStringified) as PsbtMetadata[];
+
+			console.log('got here');
 
 			if (!areAllPsbtsEquivalent(psbtsMetadata)) {
 				psbtsMetadata = null;
@@ -48,6 +106,10 @@
 	});
 
 	async function onFileSelected(file: File) {
+		contractData = tryParseFinishedContract(await file.text());
+
+		if (!contractData) return alert('File has an invalid format');
+
 		if (file && $nostrAuth?.pubkey) {
 			relayPool
 				.sub(relayList, [
@@ -64,8 +126,10 @@
 		}
 	}
 
-	// for security reasons, check if all PSBTs are equivalent before signing them
+	// for security reasons, check if all PSBTs are equivalent before signing them{@const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK.network })}
 	function areAllPsbtsEquivalent(psbtsMetadata: PsbtMetadata[]) {
+		if (psbtsMetadata.length === 1) return true;
+
 		let firstPsbtMetadata = psbtsMetadata[0];
 		const firstPsbt = Psbt.fromHex(firstPsbtMetadata.psbtHex);
 
@@ -79,7 +143,7 @@
 	}
 
 	async function handleApproveTransaction() {
-		if (!psbtsMetadata) return;
+		if (!psbtsMetadata || !contractData) return;
 
 		const pubkey = $nostrAuth?.pubkey;
 
@@ -87,32 +151,72 @@
 
 		if (!signer) return;
 
-		generatedPSBTsMetadata = await Promise.all(
-			psbtsMetadata
-				.filter(({ pubkeys }) => pubkeys.includes('02' + pubkey))
-				.map(async (metadata) => {
-					const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK });
+		if (NETWORK.isLiquid) {
+			const pset = Pset.fromBuffer(Buffer.from(psbtsMetadata[0].psbtHex, 'hex'));
 
-					await psbt.signAllInputsAsync(signer);
+			const multisig = createLiquidMultisig(
+				contractData.clientPubkeys,
+				contractData.arbitratorPubkeys,
+				contractData.arbitratorsQuorum,
+				NETWORK.network
+			);
 
-					return {
-						...metadata,
-						psbtHex: psbt.toHex()
-					};
-				})
-		);
+			await signTaprootTransaction(pset, signer, multisig.tapleafHash, NETWORK.network);
 
-		// There's only one spending possibility left, so the tx can be finished
-		if (generatedPSBTsMetadata.length === 1) {
-			const psbt = Psbt.fromHex(generatedPSBTsMetadata[0].psbtHex, { network: NETWORK });
+			console.log(pset);
 
-			psbt.finalizeAllInputs();
+			generatedPSBTsMetadata = [
+				{
+					...psbtsMetadata[0],
+					psbtHex: pset.toBuffer().toString('hex')
+				}
+			];
 
-			const tx = psbt.extractTransaction();
+			const { clientSigs, arbitratorSigs } = getTapscriptSigsOrdered(pset, contractData.clientPubkeys, contractData.arbitratorPubkeys)
 
-			if (tx.locktime !== 0) transactionLocktime = tx.locktime;
+			console.log(clientSigs, arbitratorSigs);
 
-			generatedTransactionHex = tx.toHex();
+			const howManyClientsAgree = clientSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
+
+			const howManyArbitratorsAgree = arbitratorSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
+
+			const bothPartiesAgree = howManyClientsAgree === 2;
+			const partyAndQuorumAgrees =
+				howManyClientsAgree === 1 && howManyArbitratorsAgree >= contractData.arbitratorsQuorum;
+
+			if (bothPartiesAgree || partyAndQuorumAgrees) {
+				const tx = finalizeTxSpendingFromLiquidMultisig(pset, clientSigs, arbitratorSigs);
+
+				generatedTransactionHex = tx.toHex();
+			}
+		} else {
+			generatedPSBTsMetadata = await Promise.all(
+				psbtsMetadata
+					.filter(({ pubkeys }) => pubkeys.includes('02' + pubkey))
+					.map(async (metadata) => {
+						const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK.network });
+
+						await psbt.signAllInputsAsync(signer);
+
+						return {
+							...metadata,
+							psbtHex: psbt.toHex()
+						};
+					})
+			);
+
+			// There's only one spending possibility left, so the tx can be finished
+			if (generatedPSBTsMetadata.length === 1) {
+				const psbt = Psbt.fromHex(generatedPSBTsMetadata[0].psbtHex, { network: NETWORK.network });
+
+				psbt.finalizeAllInputs();
+
+				const tx = psbt.extractTransaction();
+
+				if (tx.locktime !== 0) transactionLocktime = tx.locktime;
+
+				generatedTransactionHex = tx.toHex();
+			}
 		}
 	}
 
@@ -158,14 +262,13 @@
 		<h1 class="text-3xl">PSBT created</h1>
 		<p>Send this to another party so that they can continue the spending</p>
 		<Button on:click={copyPsbtsToClipboard}>📋 Copy</Button>
-	{:else if psbtsMetadata}
+	{:else if userShownData}
 		<!-- it's safe to get only the first one because we already checked that all PSBTs are equivalent -->
-		{@const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK })}
-		{#each psbt.txOutputs as output}
+		{#each userShownData.outputs as output}
 			<p>{output.address} receives {output.value}</p>
 		{/each}
-		{#if psbt.locktime !== 0}
-			<p>timelock: {formatDateTime(new Date(psbt.locktime * 1000))}</p>
+		{#if userShownData.locktime !== 0}
+			<p>timelock: {formatDateTime(new Date(userShownData.locktime * 1000))}</p>
 		{/if}
 		<Button on:click={handleApproveTransaction}>Approve transaction</Button>
 	{:else if psbtsMetadataStringified != ''}

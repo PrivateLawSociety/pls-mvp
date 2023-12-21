@@ -22,7 +22,7 @@ export const combine = <T>(items: Array<T>, size: number): Array<Array<T>> => {
 	return intCombine([], items, size).flat(size - 1);
 };
 
-export function createMultisig(
+export function createBitcoinMultisig(
 	publicPartsECPairs: ECPairInterface[],
 	publicArbitratorsECPairs: ECPairInterface[],
 	arbitratorsQuorum: number,
@@ -103,9 +103,7 @@ export async function startTxSpendingFromMultisig(
 
 	if (locktime) {
 		psbt.setLocktime(locktime);
-		psbt.txInputs.forEach((_, i) => 
-			psbt.setInputSequence(i, 0)
-		);
+		psbt.txInputs.forEach((_, i) => psbt.setInputSequence(i, 0));
 	}
 
 	psbt.addOutputs(receivingAddresses);

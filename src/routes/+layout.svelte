@@ -1,10 +1,12 @@
 <script lang="ts">
 	import '../app.postcss';
-	import { isMainnet } from '$lib/bitcoin';
+	import { getNetworkName, NETWORK } from '$lib/bitcoin';
 	import Person from '$lib/components/Person.svelte';
 	import { nostrAuth } from '$lib/nostr';
 
-	let network = isMainnet() ? 'mainnet' : 'testnet';
+	let isTestnet = NETWORK.isTestnet;
+
+	let networkName = getNetworkName();
 </script>
 
 <div class="flex flex-col h-screen">
@@ -15,19 +17,21 @@
 			</a>
 		{/if}
 		<a class="text-3xl text-center cursor-pointer" href="/">🏠</a>
-		{#if network === 'mainnet'}
+		{#if !isTestnet}
 			<h1 class="font-bold text-3xl bg-[#ff0000]">☣️ ALPHA ⚠️ SOFTWARE ☢️</h1>
 		{/if}
 		<select
 			class="text-black"
-			bind:value={network}
+			bind:value={networkName}
 			on:change={() => {
-				sessionStorage.setItem('network', network);
+				sessionStorage.setItem('network', networkName);
 				location.reload();
 			}}
 		>
-			<option value={'mainnet'}> Mainnet </option>
-			<option value={'testnet'}> Testnet </option>
+			<option value={'bitcoin'}> Bitcoin </option>
+			<option value={'bitcoin_testnet'}> Bitcoin Testnet </option>
+			<option value={'liquid'}> Liquid </option>
+			<option value={'liquid_testnet'}> Liquid Testnet </option>
 		</select>
 	</div>
 	<slot />

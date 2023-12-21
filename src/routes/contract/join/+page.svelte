@@ -11,9 +11,10 @@
 	import Button from '$lib/components/Button.svelte';
 	import Person from '$lib/components/Person.svelte';
 	import { hashFromFile } from '$lib/utils';
-	import { createMultisig } from '$lib/pls/multisig';
+	import { createBitcoinMultisig } from '$lib/pls/multisig';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import FileDrop from '$lib/components/FileDrop.svelte';
+	import { createLiquidMultisig } from '$lib/liquid';
 
 	let contractsData: Record<string, PartialContract> = {};
 
@@ -124,19 +125,28 @@
 	function exportContract(fileHash: string) {
 		const { arbitratorPubkeys, arbitratorsQuorum, clientPubkeys } = contractsData[fileHash];
 
-		const { multisig } = createMultisig(
-			clientPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
-			arbitratorPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
-			arbitratorsQuorum,
-			NETWORK
+		console.log(
+			clientPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex')))
 		);
+
+		const multisigAddress = NETWORK.isLiquid
+			? createLiquidMultisig(clientPubkeys, arbitratorPubkeys, arbitratorsQuorum, NETWORK.network)
+					.confidentialAddress
+			: createBitcoinMultisig(
+					clientPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
+					arbitratorPubkeys.map((pubkey) =>
+						ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))
+					),
+					arbitratorsQuorum,
+					NETWORK.network
+			  ).multisig.address;
 
 		const finishedContract = {
 			arbitratorPubkeys,
 			arbitratorsQuorum,
 			clientPubkeys,
 			fileHash: myFileHash,
-			multisigAddress: multisig.address!,
+			multisigAddress: multisigAddress,
 			signatures: contractSignatures[fileHash]
 		};
 

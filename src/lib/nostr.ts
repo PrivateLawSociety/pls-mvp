@@ -67,7 +67,7 @@ export function getOldestEvent(events: Event[]) {
 export let nostrAuth = (() => {
 	const store = writable<{ privkey?: string; pubkey: string } | null>();
 
-	function generateKeys() {
+	function loginWithRandomKeys() {
 		const privkey = generatePrivateKey();
 		const pubkey = getPublicKey(privkey);
 
@@ -89,6 +89,7 @@ public key: ${pubkey}`
 	}
 
 	return {
+		loginWithRandomKeys,
 		loginWithPrivkey(privkey: string) {
 			const pubkey = getPublicKey(privkey);
 
@@ -96,6 +97,9 @@ public key: ${pubkey}`
 				privkey,
 				pubkey
 			});
+		},
+		getPrivkey() {
+			return get(store)?.privkey
 		},
 		async tryLogin() {
 			if (get(store)?.pubkey) return true;
@@ -108,10 +112,10 @@ public key: ${pubkey}`
 
 					return true;
 				} catch (error) {
-					return generateKeys();
+					return loginWithRandomKeys();
 				}
 			} else {
-				return generateKeys();
+				return loginWithRandomKeys();
 			}
 		},
 		async encryptDM(otherPubkey: string, text: string) {
@@ -157,7 +161,9 @@ public key: ${pubkey}`
 			const { pubkey, privkey } = get(store)!;
 
 			if (privkey) {
-				const ecpair = ECPair.fromPrivateKey(Buffer.from(privkey, 'hex'), { network: NETWORK });
+				const ecpair = ECPair.fromPrivateKey(Buffer.from(privkey, 'hex'), {
+					network: NETWORK.network
+				});
 
 				return ecpair;
 			} else if (pubkey) {

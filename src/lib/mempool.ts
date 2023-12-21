@@ -1,4 +1,4 @@
-import { isMainnet } from './bitcoin';
+import { NETWORK } from './bitcoin';
 
 export interface UTXO {
 	txid: string;
@@ -6,7 +6,42 @@ export interface UTXO {
 	value: number;
 }
 
-const MEMPOOL_API_URL = 'https://mempool.space' + (isMainnet() ? `/api` : `/testnet/api`);
+const MEMPOOL_API_URL = getMempoolAPIUrl();
+
+function getMempoolAPIUrl() {
+	const start = NETWORK.isLiquid ? 'https://blockstream.info' : 'https://mempool.space';
+
+	const end = NETWORK.isTestnet
+		? NETWORK.isLiquid
+			? `/liquidtestnet/api`
+			: `/testnet/api`
+		: `/api`;
+
+	return start + end;
+}
+
+export async function getTransactionHexFromId(txId: string) {
+	try {
+		const res = await fetch(`${MEMPOOL_API_URL}/tx/${txId}/hex`);
+
+		if (!res.ok) {
+			console.log(res);
+			const text = await res.text();
+			if (text == 'Address on invalid network') {
+				alert('Contract is on the wrong network (testnet vs mainnet)');
+			}
+			return null;
+		}
+
+		return await res.text();
+	} catch (error) {
+		alert(
+			`Couldn't connect to mempool.space. Try disabling your adblocker or try using another browser`
+		);
+		console.log(error);
+		return null;
+	}
+}
 
 export async function getAddressUtxos(address: string) {
 	try {
