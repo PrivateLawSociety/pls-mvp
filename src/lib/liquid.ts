@@ -106,7 +106,10 @@ export async function startSpendFromLiquidMultisig(
 		value: number | undefined;
 	}[],
 	network: networks.Network,
-	signer: (Signer | SignerAsync) & { privateKey?: Buffer },
+	signer: {
+		publicKey: Buffer;
+		signSchnorr(hash: Buffer): Promise<Buffer> | Buffer;
+	},
 	receivingAddresses: {
 		address: string;
 		value: number;
@@ -304,7 +307,10 @@ function taprootOutputScript(internalPublicKey: Buffer, tree?: bip341.HashTree |
 
 export async function signTaprootTransaction(
 	pset: Pset,
-	keypair: (Signer | SignerAsync) & { privateKey?: Buffer },
+	keypair: {
+		publicKey: Buffer;
+		signSchnorr(hash: Buffer): Promise<Buffer> | Buffer;
+	},
 	leafHash: Buffer,
 	network: networks.Network = networks.testnet,
 	sighashType: number = Transaction.SIGHASH_ALL
@@ -317,8 +323,7 @@ export async function signTaprootTransaction(
 
 			const sighashmsg = pset.getInputPreimage(i, hashType, network.genesisBlockHash, leafHash);
 
-			// TODO TODO TODO
-			const sig = zkpLib.ecc.signSchnorr(sighashmsg, keypair.privateKey!, Buffer.alloc(32));
+			const sig = await keypair.signSchnorr(sighashmsg);
 
 			const taprootData = {
 				tapScriptSigs: [
