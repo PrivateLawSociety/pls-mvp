@@ -32,6 +32,10 @@ import secp256k1 from '@vulpemventures/secp256k1-zkp';
 
 import { bip341 } from 'liquidjs-lib';
 import { OPS } from 'liquidjs-lib/src/ops';
+import { combine } from './pls/multisig';
+import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
+import type { HashTree } from 'liquidjs-lib/src/bip341';
+import { script as bitcoinscript } from 'bitcoinjs-lib';
 
 const zkpLib = await secp256k1();
 
@@ -45,50 +49,37 @@ const blindingKeypair = ECPair.fromPrivateKey(
 export function createLiquidMultisig(
 	parts: string[],
 	arbitrators: string[],
-	// this supports only 1 arbitrator for now
-	// TODO: change that
 	arbitratorsQuorum: number,
 	network: networks.Network,
 	internalPublicKey = H
 ) {
-	const lockingScript = script.fromASM(
-		`${parts[0].slice(-64)}
-		OP_CHECKSIG
-		OP_TOALTSTACK
-		${parts[1].slice(-64)}
-		OP_CHECKSIG
-		OP_FROMALTSTACK
-		OP_ADD
-		OP_DUP
-		OP_2
-		OP_EQUAL
-		OP_IF
-		
-		OP_ELSE
-			OP_1
-			OP_EQUAL
-			OP_IF
-				OP_1
-				${arbitrators[0].slice(-64)}
-				OP_1
-				OP_CHECKMULTISIGVERIFY
-				OP_1
-			OP_ELSE
-				OP_RETURN
-			OP_ENDIF
-		OP_ENDIF`
-			.trim()
-			.replace(/\s+/g, ' ')
+	const eachChildNodeWithArbitratorsQuorum = parts
+		.map((p) => combine(arbitrators, arbitratorsQuorum).map((a) => [p, ...a]))
+		.flat(1);
+	const childNodesCombinations = [parts, ...eachChildNodeWithArbitratorsQuorum];
+	const multisigAsms = childNodesCombinations.map(
+		(childNodes) =>
+			childNodes
+				.map((childNode) => toXOnly(Buffer.from(childNode, 'hex')).toString('hex'))
+				.map((pubkey, idx) => pubkey + ' ' + (idx ? 'OP_CHECKSIGADD' : 'OP_CHECKSIG'))
+				.join(' ') + ` OP_${childNodes.length} OP_NUMEQUAL`
 	);
 
-	const leaves = [
-		{
-			scriptHex: lockingScript.toString('hex')
-		}
-	];
+	const multisigScripts = multisigAsms.map((ma, idx) => {
+		return {
+			// when building Taptree, prioritize parts agreement script (shortest path), using 1 for parts script and 5 for scripts with arbitrators
+			weight: idx ? 1 : 5,
+			leaf: { output: bitcoinscript.fromASM(ma) },
+			combination: childNodesCombinations[idx]
+		};
+	});
 
-	// const bip341API = bip341.BIP341Factory(zkpLib.ecc);
-	const hashTree = bip341.toHashTree(leaves);
+	const hashTree = bip341.toHashTree(
+		multisigScripts.map(({ leaf }) => ({
+			scriptHex: leaf.output.toString('hex')
+		})),
+		true
+	);
 
 	const scriptPubKey = taprootOutputScript(internalPublicKey, hashTree);
 
@@ -97,18 +88,17 @@ export function createLiquidMultisig(
 	return {
 		address,
 		confidentialAddress: Address.toConfidential(address, blindingKeypair.publicKey),
-		tapleafHash: hashTree.hash,
-		leaves
+		multisigScripts,
+		hashTree,
+		leaves: multisigScripts.map((script) => ({
+			scriptHex: script.leaf.output.toString('hex')
+		}))
 	};
 }
 
 export async function startSpendFromLiquidMultisig(
-	multisig: {
-		leaves: {
-			scriptHex: string;
-		}[];
-		tapleafHash: Buffer;
-	},
+	hashTree: HashTree,
+	redeemOutput: string,
 	utxos: {
 		txid: string;
 		hex: string;
@@ -164,20 +154,20 @@ export async function startSpendFromLiquidMultisig(
 					asset,
 					value,
 					Address.toOutputScript(address, network),
-					blindingKeypair.publicKey!,
+					Address.fromConfidential(address).blindingKey,
 					0
 				)
 		),
 		new CreatorOutput(asset, fees)
 	]);
 
-	const hashTree = bip341.toHashTree(multisig.leaves);
-
-	const leafHash = bip341.tapLeafHash(multisig.leaves[0]);
+	const leafHash = bip341.tapLeafHash({
+		scriptHex: redeemOutput
+	});
 	const pathToBobLeaf = bip341.findScriptPath(hashTree, leafHash);
 	const [tapscript, controlBlock] = bip341API.taprootSignScriptStack(
 		H,
-		multisig.leaves[0],
+		{ scriptHex: redeemOutput },
 		hashTree.hash,
 		pathToBobLeaf
 	);
@@ -225,9 +215,14 @@ export function finalizeTxSpendingFromLiquidMultisig(
 					? script.compile([clientSigs[1], clientSigs[0]])
 					: // this is not working yet
 					  script.compile([
-							arbitratorSigs[0]!,
-							clientSigs[1] ?? OPS.OP_0,
-							clientSigs[0] ?? OPS.OP_0
+							...arbitratorSigs.toReversed().reduce((acc: Buffer[], sig) => {
+								if (sig) acc.push(sig);
+								return acc;
+							}, []),
+							...clientSigs.toReversed().reduce((acc: Buffer[], sig) => {
+								if (sig) acc.push(sig);
+								return acc;
+							}, [])
 					  ]);
 
 			console.log('unlocking', unlockingScript.toString('hex'));

@@ -135,8 +135,10 @@
 
 		if (!signer) return;
 
+		const pubkey = $nostrAuth?.pubkey;
+
 		if (NETWORK.isLiquid) {
-			const multisig = createLiquidMultisig(
+			const { hashTree, multisigScripts } = createLiquidMultisig(
 				contractData.clientPubkeys,
 				contractData.arbitratorPubkeys,
 				contractData.arbitratorsQuorum,
@@ -146,29 +148,38 @@
 			// const unixNow = Math.floor(Date.now() / 1000);
 			// const oneDayInSeconds = 60 * 60 * 24;
 
-			const psbt = await startSpendFromLiquidMultisig(
-				multisig,
-				utxos.map((utxo) => ({
-					...utxo,
-					hex: utxo.hex!
-				})),
-				NETWORK.network,
-				signer,
-				addresses.filter(({ address }) => address.trim() !== '')
-				// timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
+			const possibleScripts = multisigScripts.filter(({ combination }) =>
+				combination.some((ecpair) => ecpair === pubkey)
 			);
-
-			if (!psbt) return alert("couldn't generate PSETs");
 
 			generatedPSBTsMetadata = [];
 
-			generatedPSBTsMetadata = [
-				{
-					redeemOutput: '',
-					psbtHex: psbt.toBuffer().toString('hex'),
-					pubkeys: []
-				}
-			];
+			for (const script of possibleScripts) {
+				const redeemOutput = script.leaf.output.toString('hex');
+
+				const psbt = await startSpendFromLiquidMultisig(
+					hashTree,
+					redeemOutput,
+					utxos.map((utxo) => ({
+						...utxo,
+						hex: utxo.hex!
+					})),
+					NETWORK.network,
+					signer,
+					addresses.filter(({ address }) => address.trim() !== '')
+					// timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
+				);
+				if (!psbt) return alert("couldn't generate PSETs");
+
+				generatedPSBTsMetadata = [
+					...generatedPSBTsMetadata,
+					{
+						redeemOutput,
+						psbtHex: psbt.toBuffer().toString('hex'),
+						pubkeys: script.combination
+					}
+				];
+			}
 		} else {
 			const { multisig, multisigScripts } = createBitcoinMultisig(
 				contractData.clientPubkeys.map((pubkey) =>
@@ -180,8 +191,6 @@
 				contractData.arbitratorsQuorum,
 				NETWORK.network
 			);
-
-			const pubkey = $nostrAuth?.pubkey;
 
 			const possibleScripts = multisigScripts.filter(({ combination }) =>
 				combination.some((ecpair) => ecpair.publicKey.toString('hex') === '02' + pubkey)

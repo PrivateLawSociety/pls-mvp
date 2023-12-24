@@ -124,11 +124,6 @@
 
 	function exportContract(fileHash: string) {
 		const { arbitratorPubkeys, arbitratorsQuorum, clientPubkeys } = contractsData[fileHash];
-
-		console.log(
-			clientPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex')))
-		);
-
 		const multisigAddress = NETWORK.isLiquid
 			? createLiquidMultisig(clientPubkeys, arbitratorPubkeys, arbitratorsQuorum, NETWORK.network)
 					.confidentialAddress

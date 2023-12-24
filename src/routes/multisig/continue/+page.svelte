@@ -10,7 +10,7 @@
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
 	import FileDrop from '$lib/components/FileDrop.svelte';
-	import { Pset, address } from 'liquidjs-lib';
+	import { Pset, address, bip341 } from 'liquidjs-lib';
 	import {
 		createLiquidMultisig,
 		finalizeTxSpendingFromLiquidMultisig,
@@ -40,32 +40,19 @@
 
 	$: userShownData = getUserShownData(psbtsMetadata);
 
-	$: console.log(userShownData);
-
 	function getUserShownData(_: any) {
-		console.log('a', psbtsMetadata);
 		if (!psbtsMetadata) return null;
-		console.log('b');
 
 		if (NETWORK.isLiquid) {
 			const pset = Pset.fromBuffer(Buffer.from(psbtsMetadata[0].psbtHex, 'hex'));
-			console.log('c');
-
-			console.log(pset.outputs);
 
 			const network = NETWORK.network;
-
-			const blindingKeypair = ECPair.fromPrivateKey(
-				Buffer.from('0000000000000000000000000000000000000000000000000000000000000001', 'hex')
-			);
 
 			return {
 				outputs: pset.outputs
 					.filter(({ script }) => script?.length !== 0)
 					.map(({ value, script, blindingPubkey }) => {
 						const addresss = address.fromOutputScript(script!, network);
-
-						console.log(address.toConfidential(addresss, blindingPubkey!));
 
 						return {
 							value,
@@ -89,8 +76,6 @@
 	$: {
 		try {
 			psbtsMetadata = JSON.parse(psbtsMetadataStringified) as PsbtMetadata[];
-
-			console.log('got here');
 
 			if (!areAllPsbtsEquivalent(psbtsMetadata)) {
 				psbtsMetadata = null;
@@ -126,20 +111,36 @@
 		}
 	}
 
-	// for security reasons, check if all PSBTs are equivalent before signing them{@const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK.network })}
+	// for security reasons, check if all PSBTs are equivalent before signing
 	function areAllPsbtsEquivalent(psbtsMetadata: PsbtMetadata[]) {
 		if (psbtsMetadata.length === 1) return true;
 
-		let firstPsbtMetadata = psbtsMetadata[0];
-		const firstPsbt = Psbt.fromHex(firstPsbtMetadata.psbtHex);
+		if (NETWORK.isLiquid) {
+			const firstPsetMetadata = psbtsMetadata[0];
+			const firstPset = Pset.fromBuffer(Buffer.from(firstPsetMetadata.psbtHex, 'hex'));
 
-		return psbtsMetadata.every(({ psbtHex }) =>
-			Psbt.fromHex(psbtHex).txOutputs.every(
-				(output, i) =>
-					output.address === firstPsbt.txOutputs[i].address &&
-					output.value === firstPsbt.txOutputs[i].value
-			)
-		);
+			return psbtsMetadata
+				.map(({ psbtHex }) => Pset.fromBuffer(Buffer.from(psbtHex, 'hex')))
+				.every((pset) =>
+					pset.outputs.every((output, i) => {
+						return (
+							output.script?.toString('hex') == firstPset.outputs[i].script?.toString('hex') &&
+							output.value == firstPset.outputs[i].value
+						);
+					})
+				);
+		} else {
+			const firstPsbtMetadata = psbtsMetadata[0];
+			const firstPsbt = Psbt.fromHex(firstPsbtMetadata.psbtHex);
+
+			return psbtsMetadata.every(({ psbtHex }) =>
+				Psbt.fromHex(psbtHex).txOutputs.every(
+					(output, i) =>
+						output.address === firstPsbt.txOutputs[i].address &&
+						output.value === firstPsbt.txOutputs[i].value
+				)
+			);
+		}
 	}
 
 	async function handleApproveTransaction() {
@@ -147,52 +148,74 @@
 
 		const pubkey = $nostrAuth?.pubkey;
 
+		if (!pubkey) return;
+
 		const signer = nostrAuth.getSigner();
 
 		if (!signer) return;
 
 		if (NETWORK.isLiquid) {
-			const pset = Pset.fromBuffer(Buffer.from(psbtsMetadata[0].psbtHex, 'hex'));
-
-			const multisig = createLiquidMultisig(
+			const { multisigScripts } = createLiquidMultisig(
 				contractData.clientPubkeys,
 				contractData.arbitratorPubkeys,
 				contractData.arbitratorsQuorum,
 				NETWORK.network
 			);
 
-			await signTaprootTransaction(pset, signer, multisig.tapleafHash, NETWORK.network);
+			generatedPSBTsMetadata = await Promise.all(
+				psbtsMetadata
+					.filter(({ pubkeys }) => pubkeys.includes(pubkey))
+					.map(async (metadata) => {
+						if (!NETWORK.isLiquid) throw new Error('Network is not liquid');
 
-			console.log(pset);
+						const redeemOutput = multisigScripts
+							.find(({ combination }) =>
+								combination.sort().every((pubkey, i) => pubkey === metadata.pubkeys.sort()[i])
+							)
+							?.leaf.output.toString('hex');
 
-			generatedPSBTsMetadata = [
-				{
-					...psbtsMetadata[0],
-					psbtHex: pset.toBuffer().toString('hex')
+						if (!redeemOutput) throw new Error('No redeem output');
+
+						const pset = Pset.fromBuffer(Buffer.from(metadata.psbtHex, 'hex'));
+
+						const leafHash = bip341.tapLeafHash({
+							scriptHex: redeemOutput
+						});
+
+						await signTaprootTransaction(pset, signer, leafHash, NETWORK.network);
+
+						return {
+							...metadata,
+							psbtHex: pset.toBuffer().toString('hex')
+						};
+					})
+			);
+
+			if (generatedPSBTsMetadata.length === 1) {
+				const pset = Pset.fromBuffer(Buffer.from(generatedPSBTsMetadata[0].psbtHex, 'hex'));
+
+				const { clientSigs, arbitratorSigs } = getTapscriptSigsOrdered(
+					pset,
+					contractData.clientPubkeys,
+					contractData.arbitratorPubkeys
+				);
+
+				const clientSigAmount = clientSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
+				const arbitratorSigAmount = arbitratorSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
+
+				if (
+					clientSigAmount == 2 ||
+					(clientSigAmount == 1 && arbitratorSigAmount >= contractData.arbitratorsQuorum)
+				) {
+					const tx = finalizeTxSpendingFromLiquidMultisig(pset, clientSigs, arbitratorSigs);
+
+					generatedTransactionHex = tx.toHex();
 				}
-			];
-
-			const { clientSigs, arbitratorSigs } = getTapscriptSigsOrdered(pset, contractData.clientPubkeys, contractData.arbitratorPubkeys)
-
-			console.log(clientSigs, arbitratorSigs);
-
-			const howManyClientsAgree = clientSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
-
-			const howManyArbitratorsAgree = arbitratorSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
-
-			const bothPartiesAgree = howManyClientsAgree === 2;
-			const partyAndQuorumAgrees =
-				howManyClientsAgree === 1 && howManyArbitratorsAgree >= contractData.arbitratorsQuorum;
-
-			if (bothPartiesAgree || partyAndQuorumAgrees) {
-				const tx = finalizeTxSpendingFromLiquidMultisig(pset, clientSigs, arbitratorSigs);
-
-				generatedTransactionHex = tx.toHex();
 			}
 		} else {
 			generatedPSBTsMetadata = await Promise.all(
 				psbtsMetadata
-					.filter(({ pubkeys }) => pubkeys.includes('02' + pubkey))
+					.filter(({ pubkeys }) => '02' + pubkeys.includes(pubkey))
 					.map(async (metadata) => {
 						const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK.network });
 
