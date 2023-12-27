@@ -1,38 +1,45 @@
-# create-svelte
+# Private Law Society MVP (Minimum Viable Product)
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+[**[🇧🇷] Versão em português: LEIAME.md**](LEIAME.md)
 
-## Creating a project
+## TL;DR
 
-If you're seeing this, you've probably already done this step. Congrats!
+PLS (Private Law Society) is a project seeking to support the creation of contracts where both parties agree on an arbitrator (or multiple arbitrators) and Bitcoin is used as collateral, so that the contract has its due enforcement. The parties send the necessary collateral to the contract, where it can be later redeemed if either:
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+1. Both parties agree
+2. One of the parties + the arbitrators agree
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+This means the arbitrators can't run off with the money by themselves, but they can still financially punish the other party.
+
+## Useful links
+
+[Join the Discord server here](https://www.privatelawsociety.net/join)
+
+[PLS Youtube channel](https://www.youtube.com/@privatelawsociety)
+
+[PLS Twitter page](https://twitter.com/PrivateLawSoc)
+
+[Hosted website for the MVP](https://pls-mvp.vercel.app/)
+
+[🇧🇷] [Podcast episode about PLS](https://www.youtube.com/watch?v=NGx7h9kpPE8)
+
+[More documentation can be found here](https://private-law-society.gitbook.io/docs/)
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Once you've downloaded the project and installed dependencies with `npm install`, start a development server:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
+# `-- --open` opens the website in a new browser tab
 npm run dev -- --open
 ```
 
-## Building
+## Running Locally
 
-To create a production version of your app:
+To create a production version:
 
 ```bash
 npm run build
 ```
 
 You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
