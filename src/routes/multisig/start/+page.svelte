@@ -6,7 +6,7 @@
 	import { SpendRequestEvent, type PsbtMetadata, type SpendRequestPayload } from '../shared';
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
-	import { hashFromFile } from '$lib/utils';
+	import { downloadBlob, hashFromFile } from '$lib/utils';
 	import {
 		getAddressUnconfirmedTxs,
 		getAddressUtxos,
@@ -236,7 +236,7 @@
 	async function sendViaNostr() {
 		if (!generatedPSBTsMetadata) return;
 
-		const file = myFiles?.item(0);
+		const file = myFiles?.item(0) ?? $contractDataFileStore;
 
 		if (!file) return;
 
@@ -256,14 +256,9 @@
 	{#if generatedPSBTsMetadata}
 		<h1 class="text-3xl">Spending initiated</h1>
 		<p>Send this to another party so that they can complete the spending:</p>
-		<div class="flex items-end gap-2">
-			<LabelledInput type="text" label="PSBT" value={JSON.stringify(generatedPSBTsMetadata)} />
-			<Button on:click={copyToClipboard}>📋 Copy</Button>
-		</div>
+		<Button on:click={copyToClipboard}>📋 Copy</Button>
 		<p>or</p>
-		<div class="flex items-end gap-2">
-			<Button on:click={sendViaNostr}>Send via nostr</Button>
-		</div>
+		<Button on:click={sendViaNostr}>Send via nostr</Button>
 	{:else}
 		<h1 class="text-3xl font-bold">Start withdraw from contract</h1>
 

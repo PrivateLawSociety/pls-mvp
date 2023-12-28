@@ -64,3 +64,13 @@ export function formatDateTime(date: Date) {
 
 	return `${dateTime} - ${hourTime}`;
 }
+
+export function downloadBlob(blob: Blob) {
+	const a = document.createElement('a');
+	const url = window.URL.createObjectURL(blob);
+	a.href = url;
+	a.download = 'contract_data.json';
+
+	a.click();	
+	window.URL.revokeObjectURL(url);
+}

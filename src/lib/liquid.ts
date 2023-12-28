@@ -5,10 +5,10 @@ import {
 	payments,
 	confidential,
 	script,
-	crypto
+	crypto,
+	bip341
 } from 'liquidjs-lib';
 import { ECPair } from './bitcoin';
-import type { Signer, SignerAsync } from 'ecpair';
 
 import {
 	Creator as PsetCreator,
@@ -22,16 +22,12 @@ import {
 	witnessStackToScriptWitness
 } from 'liquidjs-lib/src/psetv2';
 
-import { testnet } from 'liquidjs-lib/src/networks';
-
 import { ZKPGenerator, ZKPValidator } from './myZKP';
 
 import * as ecc from 'tiny-secp256k1';
 
 import secp256k1 from '@vulpemventures/secp256k1-zkp';
 
-import { bip341 } from 'liquidjs-lib';
-import { OPS } from 'liquidjs-lib/src/ops';
 import { combine } from './pls/multisig';
 import { toXOnly } from 'bitcoinjs-lib/src/psbt/bip371';
 import type { HashTree } from 'liquidjs-lib/src/bip341';
@@ -120,7 +116,7 @@ export async function startSpendFromLiquidMultisig(
 	const pset = PsetCreator.newPset();
 	const updater = new PsetUpdater(pset);
 
-	const asset = testnet.assetHash;
+	const asset = network.assetHash;
 
 	let usedUtxos = utxos.map((utxo) => ({
 		txid: utxo.txid,
@@ -312,7 +308,7 @@ export async function signTaprootTransaction(
 		signSchnorr(hash: Buffer): Promise<Buffer> | Buffer;
 	},
 	leafHash: Buffer,
-	network: networks.Network = networks.testnet,
+	network: networks.Network,
 	sighashType: number = Transaction.SIGHASH_ALL
 ) {
 	const signer = new PsetSigner(pset);

@@ -3,11 +3,11 @@
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import { Psbt } from 'bitcoinjs-lib';
 	import { SpendRequestEvent, type PsbtMetadata, type SpendRequestPayload } from '../shared';
-	import { nostrAuth, relayList, relayPool } from '$lib/nostr';
+	import { broadcastToNostr, nostrAuth, relayList, relayPool } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { formatDateTime, hashFromFile } from '$lib/utils';
 	import { publishTransaction } from '$lib/mempool';
-	import { ECPair, NETWORK } from '$lib/bitcoin';
+	import { NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
 	import FileDrop from '$lib/components/FileDrop.svelte';
 	import { Pset, address, bip341 } from 'liquidjs-lib';
@@ -29,6 +29,14 @@
 	let contractData: FinishedContractData | null = null;
 
 	let myFiles: FileList | undefined;
+
+	let psbtFiles: FileList | undefined;
+
+	$: {
+		const file = psbtFiles?.item(0);
+
+		if (file) file.text().then((text) => (psbtsMetadataStringified = text));
+	}
 
 	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
 
@@ -262,12 +270,32 @@
 
 		publishTransaction(generatedTransactionHex);
 	}
+
+	async function sendViaNostr() {
+		if (!generatedPSBTsMetadata) return;
+
+		const file = myFiles?.item(0) ?? $contractDataFileStore;
+
+		if (!file) return;
+
+		const payload = JSON.stringify({
+			psbtsMetadata: generatedPSBTsMetadata
+		} as SpendRequestPayload);
+
+		const event = await nostrAuth.makeEvent(SpendRequestEvent, payload, [
+			['h', (await hashFromFile(file)).toString('hex')]
+		]);
+
+		broadcastToNostr(event);
+	}
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
 	{#if !generatedPSBTsMetadata && !psbtsMetadata}
 		<h1 class="text-3xl font-bold">Continue spend from multisig</h1>
 		<LabelledInput type="text" label="PSBT hex" bind:value={psbtsMetadataStringified} />
+		<p>or</p>
+		<FileDrop dropText={'Drop PSBT here'} bind:files={psbtFiles} />
 		{#if !myFiles?.length && !$contractDataFileStore}
 			<p>or from nostr:</p>
 			<FileDrop dropText={'Drop contract data here'} bind:files={myFiles} />
@@ -285,6 +313,8 @@
 		<h1 class="text-3xl">PSBT created</h1>
 		<p>Send this to another party so that they can continue the spending</p>
 		<Button on:click={copyPsbtsToClipboard}>📋 Copy</Button>
+		<p>or</p>
+		<Button on:click={sendViaNostr}>Send via nostr</Button>
 	{:else if userShownData}
 		<!-- it's safe to get only the first one because we already checked that all PSBTs are equivalent -->
 		{#each userShownData.outputs as output}

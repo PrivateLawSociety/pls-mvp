@@ -10,7 +10,7 @@
 	import { signPartialContract, type PartialContract } from '$lib/pls/contract';
 	import Button from '$lib/components/Button.svelte';
 	import Person from '$lib/components/Person.svelte';
-	import { hashFromFile } from '$lib/utils';
+	import { downloadBlob, hashFromFile } from '$lib/utils';
 	import { createBitcoinMultisig } from '$lib/pls/multisig';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import FileDrop from '$lib/components/FileDrop.svelte';
@@ -145,13 +145,7 @@
 			signatures: contractSignatures[fileHash]
 		};
 
-		const a = document.createElement('a');
-		const url = window.URL.createObjectURL(new Blob([JSON.stringify(finishedContract, null, 4)]));
-		a.href = url;
-		a.download = 'contract_data.json';
-
-		a.click();
-		window.URL.revokeObjectURL(url);
+		downloadBlob(new Blob([JSON.stringify(finishedContract, null, 4)]))
 
 		return finishedContract;
 	}

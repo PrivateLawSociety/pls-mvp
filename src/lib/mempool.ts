@@ -15,6 +15,8 @@ function getMempoolAPIUrl() {
 		? NETWORK.isLiquid
 			? `/liquidtestnet/api`
 			: `/testnet/api`
+		: NETWORK.isLiquid
+		? `/liquid/api`
 		: `/api`;
 
 	return start + end;

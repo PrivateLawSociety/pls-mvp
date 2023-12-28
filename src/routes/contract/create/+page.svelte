@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import Button from '$lib/components/Button.svelte';
 	import {
 		broadcastToNostr,
@@ -97,6 +98,8 @@
 
 			broadcastToNostr(event);
 		}
+
+		goto('/contract/join');
 	}
 </script>
 
