@@ -30,10 +30,12 @@ export function getNetworkData(): { isTestnet: boolean } & (
 	| {
 			isLiquid: false;
 			network: bitcoin.networks.Network;
+			name: 'bitcoin' | 'bitcoin_testnet';
 	  }
 	| {
 			isLiquid: true;
 			network: liquid.networks.Network;
+			name: 'liquid' | 'liquid_testnet';
 	  }
 ) {
 	const networkName = getNetworkName();
@@ -42,25 +44,29 @@ export function getNetworkData(): { isTestnet: boolean } & (
 		return {
 			isLiquid: false,
 			isTestnet: false,
-			network: bitcoin.networks.bitcoin
+			network: bitcoin.networks.bitcoin,
+			name: networkName
 		};
 	else if (networkName === 'bitcoin_testnet')
 		return {
 			isLiquid: false,
 			isTestnet: true,
-			network: bitcoin.networks.testnet
+			network: bitcoin.networks.testnet,
+			name: networkName
 		};
 	else if (networkName === 'liquid')
 		return {
 			isLiquid: true,
 			isTestnet: false,
-			network: liquid.networks.liquid
+			network: liquid.networks.liquid,
+			name: networkName
 		};
 	else if (networkName === 'liquid_testnet')
 		return {
 			isLiquid: true,
 			isTestnet: true,
-			network: liquid.networks.testnet
+			network: liquid.networks.testnet,
+			name: networkName
 		};
 
 	throw new Error('It should be impossible to get here');

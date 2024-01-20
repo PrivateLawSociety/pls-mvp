@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { createBitcoinMultisig, startTxSpendingFromMultisig } from '$lib/pls/multisig';
+	import { createBitcoinMultisig, startTxSpendingFromMultisig } from 'pls-bitcoin';
 	import Button from '$lib/components/Button.svelte';
 	import LabelledInput from '$lib/components/LabelledInput.svelte';
-	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
+	import { tryParseFinishedContract } from '$lib/pls/contract';
+	import type { Contract } from 'pls-full';
 	import { SpendRequestEvent, type PsbtMetadata, type SpendRequestPayload } from '../shared';
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
-	import { downloadBlob, hashFromFile } from '$lib/utils';
+	import { hashFromFile } from '$lib/utils';
 	import {
 		getAddressUnconfirmedTxs,
 		getAddressUtxos,
@@ -20,11 +21,11 @@
 		createLiquidMultisig,
 		getUnblindedUtxoValue,
 		startSpendFromLiquidMultisig
-	} from '$lib/liquid';
+	} from 'pls-liquid';
 
 	let utxos: (UTXO & { hex?: string })[] | null = null;
 
-	let contractData: FinishedContractData | null = null;
+	let contractData: Contract | null = null;
 
 	let myFiles: FileList | undefined;
 
@@ -76,11 +77,9 @@
 	async function onFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
 
-		if (!contractData) {
-			return alert('File has an invalid format');
-		}
+		if (!contractData) return;
 
-		utxos = await getAddressUtxos(contractData.multisigAddress);
+		utxos = await getAddressUtxos(contractData.collateral.multisigAddress);
 
 		if (NETWORK.isLiquid && utxos) {
 			const txHexes = await Promise.all(utxos.map((utxo) => getTransactionHexFromId(utxo.txid)));
@@ -108,7 +107,9 @@
 				return acc;
 			}, [] as (UTXO & { hex: string; value: number })[]);
 		} else {
-			const unconfirmedTxs = await getAddressUnconfirmedTxs(contractData.multisigAddress);
+			const unconfirmedTxs = await getAddressUnconfirmedTxs(
+				contractData.collateral.multisigAddress
+			);
 
 			if (!unconfirmedTxs) return;
 
@@ -139,9 +140,9 @@
 
 		if (NETWORK.isLiquid) {
 			const { hashTree, multisigScripts } = createLiquidMultisig(
-				contractData.clientPubkeys,
-				contractData.arbitratorPubkeys,
-				contractData.arbitratorsQuorum,
+				contractData.collateral.pubkeys.clients,
+				contractData.collateral.pubkeys.arbitrators,
+				contractData.collateral.arbitratorsQuorum,
 				NETWORK.network
 			);
 
@@ -182,13 +183,13 @@
 			}
 		} else {
 			const { multisig, multisigScripts } = createBitcoinMultisig(
-				contractData.clientPubkeys.map((pubkey) =>
+				contractData.collateral.pubkeys.clients.map((pubkey) =>
 					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK.network })
 				),
-				contractData.arbitratorPubkeys.map((pubkey) =>
+				contractData.collateral.pubkeys.arbitrators.map((pubkey) =>
 					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK.network })
 				),
-				contractData.arbitratorsQuorum,
+				contractData.collateral.arbitratorsQuorum,
 				NETWORK.network
 			);
 

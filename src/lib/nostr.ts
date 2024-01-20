@@ -99,7 +99,7 @@ public key: ${pubkey}`
 			});
 		},
 		getPrivkey() {
-			return get(store)?.privkey
+			return get(store)?.privkey;
 		},
 		async tryLogin() {
 			if (get(store)?.pubkey) return true;

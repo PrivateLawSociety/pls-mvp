@@ -3,14 +3,24 @@ import { vitePreprocess } from '@sveltejs/kit/vite';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	// Consult https://kit.svelte.dev/docs/integrations#preprocessors
-	// for more information about preprocessors
 	preprocess: [vitePreprocess({})],
 
 	kit: {
-		// adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
-		// If your environment is not supported or you settled on a specific environment, switch out the adapter.
-		// See https://kit.svelte.dev/docs/adapters for more information about adapters.
+		alias: {
+			// I hate this but it works so I don't care
+			'pls-bitcoin': './node_modules/pls-lib/packages/pls-bitcoin',
+			'pls-core': './node_modules/pls-lib/packages/pls-core',
+			'pls-full': './node_modules/pls-lib/packages/pls-full',
+			'pls-liquid': './node_modules/pls-lib/packages/pls-liquid',
+			'pls-nostr': './node_modules/pls-lib/packages/pls-nostr'
+
+			// If you want to use pls-lib locally
+			// 'pls-bitcoin': '../pls-lib/packages/pls-bitcoin',
+			// 'pls-core': '../pls-lib/packages/pls-core',
+			// 'pls-full': '../pls-lib/packages/pls-full',
+			// 'pls-liquid': '../pls-lib/packages/pls-liquid',
+			// 'pls-nostr': '../pls-lib/packages/pls-nostr'
+		},
 		adapter: adapter()
 	}
 };

@@ -7,21 +7,25 @@
 		type ContractRequestPayload,
 		type ContractApprovalPayload
 	} from '../create/shared';
-	import { signPartialContract, type PartialContract } from '$lib/pls/contract';
+
+	import { contractSchema, type UnsignedContract } from 'pls-full';
+
+	import { signContract } from '$lib/pls/contract';
 	import Button from '$lib/components/Button.svelte';
 	import Person from '$lib/components/Person.svelte';
 	import { downloadBlob, hashFromFile } from '$lib/utils';
-	import { createBitcoinMultisig } from '$lib/pls/multisig';
+	import { createBitcoinMultisig } from 'pls-bitcoin';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import FileDrop from '$lib/components/FileDrop.svelte';
-	import { createLiquidMultisig } from '$lib/liquid';
+	import { createLiquidMultisig } from 'pls-liquid';
 
-	let contractsData: Record<string, PartialContract> = {};
+	let contractsData: Record<string, UnsignedContract> = {};
 
 	let contractSignatures: Record<string, Record<string, string>> = {};
 
 	let myFiles: FileList | undefined;
 	let myFileHash: string | undefined;
+	let myFileName: string | undefined;
 
 	$: {
 		const file = myFiles?.item(0);
@@ -29,6 +33,7 @@
 		if (file)
 			hashFromFile(file).then((hash) => {
 				myFileHash = hash.toString('hex');
+				myFileName = file.name;
 			});
 	}
 
@@ -48,7 +53,40 @@
 						await nostrAuth.decryptDM(e.pubkey, e.content)
 					) as ContractRequestPayload;
 
-					contractsData[data.fileHash] = data;
+					contractsData[data.fileHash] = {
+						collateral: {
+							arbitratorsQuorum: data.arbitratorsQuorum,
+							multisigAddress: getMultisigAddress({
+								arbitrators: data.arbitratorPubkeys,
+								arbitratorsQuorum: data.arbitratorsQuorum,
+								clients: data.clientPubkeys
+							}),
+							network: NETWORK.name,
+							// TODO TODO TODO
+							privateBlindingKey:
+								'0000000000000000000000000000000000000000000000000000000000000001',
+							pubkeys: {
+								clients: data.clientPubkeys,
+								arbitrators: data.arbitratorPubkeys
+							},
+							type: 'taproot-v0'
+						},
+						communication: {
+							identifiers: {
+								clients: data.clientPubkeys,
+								arbitrators: data.arbitratorPubkeys
+							},
+							type: 'nostr'
+						},
+						document: {
+							pubkeys: {
+								clients: data.clientPubkeys,
+								arbitrators: data.arbitratorPubkeys
+							},
+							fileHash: data.fileHash
+						},
+						version: 0
+					};
 				});
 
 			relayPool
@@ -79,9 +117,12 @@
 
 		if (!signer) return;
 
-		const signature = (await signPartialContract(signer, dataToSign)).toString('hex');
+		const signature = (await signContract(signer, dataToSign)).toString('hex');
 
-		const pubkeys = [...dataToSign.arbitratorPubkeys, ...dataToSign.clientPubkeys];
+		const pubkeys = [
+			...dataToSign.document.pubkeys.arbitrators,
+			...dataToSign.document.pubkeys.clients
+		];
 
 		const payload = JSON.stringify({
 			signature: signature,
@@ -117,37 +158,45 @@
 			return false;
 
 		return [
-			...contractsData[fileHash].clientPubkeys,
-			...contractsData[fileHash].arbitratorPubkeys
+			...contractsData[fileHash].document.pubkeys.clients,
+			...contractsData[fileHash].document.pubkeys.arbitrators
 		].every((pubkey) => Object.keys(contractSignatures[fileHash]).includes(pubkey));
 	}
 
-	function exportContract(fileHash: string) {
-		const { arbitratorPubkeys, arbitratorsQuorum, clientPubkeys } = contractsData[fileHash];
-		const multisigAddress = NETWORK.isLiquid
-			? createLiquidMultisig(clientPubkeys, arbitratorPubkeys, arbitratorsQuorum, NETWORK.network)
+	function getMultisigAddress({
+		arbitratorsQuorum,
+		arbitrators,
+		clients
+	}: {
+		arbitratorsQuorum: number;
+		arbitrators: string[];
+		clients: string[];
+	}) {
+		return NETWORK.isLiquid
+			? createLiquidMultisig(clients, arbitrators, arbitratorsQuorum, NETWORK.network)
 					.confidentialAddress
 			: createBitcoinMultisig(
-					clientPubkeys.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
-					arbitratorPubkeys.map((pubkey) =>
-						ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))
-					),
+					clients.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
+					arbitrators.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
 					arbitratorsQuorum,
 					NETWORK.network
-			  ).multisig.address;
+			  ).multisig.address!;
+	}
 
-		const finishedContract = {
-			arbitratorPubkeys,
-			arbitratorsQuorum,
-			clientPubkeys,
-			fileHash: myFileHash,
-			multisigAddress: multisigAddress,
+	function exportContract(fileHash: string) {
+		if (!myFileName) return;
+
+		const parsed = contractSchema.safeParse({
+			...contractsData[fileHash],
 			signatures: contractSignatures[fileHash]
-		};
+		});
 
-		downloadBlob(new Blob([JSON.stringify(finishedContract, null, 4)]))
+		const fileName = myFileName.includes('.') ? myFileName.split('.')[0] : myFileName;
 
-		return finishedContract;
+		if (parsed.success)
+			downloadBlob(new Blob([JSON.stringify(parsed.data, null, 4)]), `${fileName}.json`);
+
+		return parsed;
 	}
 </script>
 
@@ -157,8 +206,8 @@
 			<p>Involved clients:</p>
 			<div class="flex flex-wrap gap-4">
 				{#key contractSignatures}
-					{#each data.clientPubkeys as pubkey}
-						{@const signed = isContractSignedBy(data.fileHash, pubkey)}
+					{#each data.document.pubkeys.clients as pubkey}
+						{@const signed = isContractSignedBy(data.document.fileHash, pubkey)}
 						<div class="flex flex-col">
 							<Person {pubkey} />
 
@@ -171,8 +220,8 @@
 			<p>Involved arbitrators:</p>
 			<div class="flex flex-wrap gap-4">
 				{#key contractSignatures}
-					{#each data.arbitratorPubkeys as pubkey}
-						{@const signed = isContractSignedBy(data.fileHash, pubkey)}
+					{#each data.document.pubkeys.arbitrators as pubkey}
+						{@const signed = isContractSignedBy(data.document.fileHash, pubkey)}
 						<div class="flex flex-col">
 							<Person {pubkey} />
 
@@ -182,16 +231,17 @@
 					{/each}
 				{/key}
 			</div>
-			<p>{data.arbitratorsQuorum} arbitrators need to agree</p>
+			<p>{data.collateral.arbitratorsQuorum} arbitrators need to agree</p>
 
 			<FileDrop dropText={'Drop contract text here'} bind:files={myFiles} />
 
-			{#if data.fileHash === myFileHash}
+			{#if data.document.fileHash === myFileHash}
 				{#key contractSignatures}
 					<Button
-						on:click={() => handleApprove(data.fileHash)}
-						disabled={$nostrAuth ? isContractSignedBy(data.fileHash, $nostrAuth?.pubkey) : true}
-						>Approve</Button
+						on:click={() => handleApprove(data.document.fileHash)}
+						disabled={$nostrAuth
+							? isContractSignedBy(data.document.fileHash, $nostrAuth?.pubkey)
+							: true}>Approve</Button
 					>
 				{/key}
 			{:else if myFileHash !== undefined}
@@ -199,8 +249,8 @@
 			{/if}
 
 			{#key contractSignatures}
-				{#if hasAllSignatures(data.fileHash)}
-					<Button on:click={() => exportContract(data.fileHash)}>Export contract</Button>
+				{#if hasAllSignatures(data.document.fileHash)}
+					<Button on:click={() => exportContract(data.document.fileHash)}>Export contract</Button>
 				{/if}
 			{/key}
 		{:else}

@@ -16,8 +16,9 @@
 		finalizeTxSpendingFromLiquidMultisig,
 		getTapscriptSigsOrdered,
 		signTaprootTransaction
-	} from '$lib/liquid';
-	import { tryParseFinishedContract, type FinishedContractData } from '$lib/pls/contract';
+	} from 'pls-liquid';
+	import { tryParseFinishedContract } from '$lib/pls/contract';
+	import type { UnsignedContract } from 'pls-full';
 
 	let psbtsMetadataStringified = '';
 
@@ -26,7 +27,7 @@
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 	let generatedTransactionHex: string | null = null;
 
-	let contractData: FinishedContractData | null = null;
+	let contractData: UnsignedContract | null = null;
 
 	let myFiles: FileList | undefined;
 
@@ -101,7 +102,7 @@
 	async function onFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
 
-		if (!contractData) return alert('File has an invalid format');
+		if (!contractData) return;
 
 		if (file && $nostrAuth?.pubkey) {
 			relayPool
@@ -164,9 +165,9 @@
 
 		if (NETWORK.isLiquid) {
 			const { multisigScripts } = createLiquidMultisig(
-				contractData.clientPubkeys,
-				contractData.arbitratorPubkeys,
-				contractData.arbitratorsQuorum,
+				contractData.collateral.pubkeys.clients,
+				contractData.collateral.pubkeys.arbitrators,
+				contractData.collateral.arbitratorsQuorum,
 				NETWORK.network
 			);
 
@@ -204,8 +205,8 @@
 
 				const { clientSigs, arbitratorSigs } = getTapscriptSigsOrdered(
 					pset,
-					contractData.clientPubkeys,
-					contractData.arbitratorPubkeys
+					contractData.collateral.pubkeys.clients,
+					contractData.collateral.pubkeys.arbitrators
 				);
 
 				const clientSigAmount = clientSigs.reduce((acc, sig) => (sig ? acc + 1 : acc), 0);
@@ -213,7 +214,7 @@
 
 				if (
 					clientSigAmount == 2 ||
-					(clientSigAmount == 1 && arbitratorSigAmount >= contractData.arbitratorsQuorum)
+					(clientSigAmount == 1 && arbitratorSigAmount >= contractData.collateral.arbitratorsQuorum)
 				) {
 					const tx = finalizeTxSpendingFromLiquidMultisig(pset, clientSigs, arbitratorSigs);
 

@@ -23,12 +23,18 @@ dependencies:
   nostr-tools:
     specifier: ^1.16.0
     version: 1.16.0(typescript@5.2.2)
+  pls-lib:
+    specifier: github:marcusmmmz/pls-lib
+    version: github.com/marcusmmmz/pls-lib/48b7b9cb0b8f7a4c15174683a110ed3d22a3a7d0
   qrcode-generator:
     specifier: ^1.4.4
     version: 1.4.4
   tiny-secp256k1:
     specifier: ^2.2.3
     version: 2.2.3
+  zod:
+    specifier: ^3.22.4
+    version: 3.22.4
 
 devDependencies:
   '@esbuild-plugins/node-globals-polyfill':
@@ -2622,3 +2628,14 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
+
+  /zod@3.22.4:
+    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false
+
+  github.com/marcusmmmz/pls-lib/48b7b9cb0b8f7a4c15174683a110ed3d22a3a7d0:
+    resolution: {tarball: https://codeload.github.com/marcusmmmz/pls-lib/tar.gz/48b7b9cb0b8f7a4c15174683a110ed3d22a3a7d0}
+    name: pls-lib
+    version: 0.0.0
+    engines: {node: '>=18'}
+    dev: false

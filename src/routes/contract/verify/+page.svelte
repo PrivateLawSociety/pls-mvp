@@ -1,9 +1,6 @@
 <script lang="ts">
-	import {
-		tryParseFinishedContract,
-		type FinishedContractData,
-		verifyPartialContract
-	} from '$lib/pls/contract';
+	import { tryParseFinishedContract, verifyContract } from '$lib/pls/contract';
+	import type { Contract } from 'pls-full';
 	import { hashFromFile } from '$lib/utils';
 	import Person from '$lib/components/Person.svelte';
 	import { ECPair } from '$lib/bitcoin';
@@ -16,7 +13,7 @@
 	let contractTextFile: FileList | undefined;
 	let contractTextHash: string;
 
-	let contractData: FinishedContractData | null = null;
+	let contractData: Contract | null = null;
 
 	if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
 
@@ -37,14 +34,12 @@
 
 	async function onContractDataFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
-
-		if (!contractData) return alert('File has an invalid format');
 	}
 
-	function isSignatureValid(contractData: FinishedContractData, pubkey: string) {
+	function isSignatureValid(contractData: Contract, pubkey: string) {
 		const ecpair = ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'));
 		const signature = contractData.signatures[pubkey];
-		const isValid = verifyPartialContract(ecpair, contractData, Buffer.from(signature, 'hex'));
+		const isValid = verifyContract(ecpair, contractData, Buffer.from(signature, 'hex'));
 
 		return isValid;
 	}
@@ -60,7 +55,7 @@
 			<div class="flex flex-col text-center gap-2">
 				<p class="text-xl">Clients:</p>
 				<div class="flex flex-wrap gap-4">
-					{#each contractData.clientPubkeys as pubkey}
+					{#each contractData.document.pubkeys.clients as pubkey}
 						{@const valid = isSignatureValid(contractData, pubkey)}
 						<div class="flex flex-col">
 							<Person {pubkey} />
@@ -76,7 +71,7 @@
 			<div class="flex flex-col text-center gap-2">
 				<p class="text-xl">Arbitrators:</p>
 				<div class="flex flex-wrap gap-4">
-					{#each contractData.arbitratorPubkeys as pubkey}
+					{#each contractData.document.pubkeys.arbitrators as pubkey}
 						{@const valid = isSignatureValid(contractData, pubkey)}
 						<div class="flex flex-col">
 							<Person {pubkey} />
@@ -90,14 +85,14 @@
 			</div>
 		</div>
 
-		{@const quorum = contractData.arbitratorsQuorum}
+		{@const quorum = contractData.collateral.arbitratorsQuorum}
 
 		<p>
 			{quorum}
 			{quorum == 1 ? 'arbitrator' : 'arbitrators'} constitute{quorum == 1 ? 's' : ''} a decision
 		</p>
 
-		{@const valid = contractData.fileHash === contractTextHash}
+		{@const valid = contractData.document.fileHash === contractTextHash}
 		{#if !contractTextHash || !valid}
 			<FileDrop dropText={'Drop contract text here'} bind:files={contractTextFile} />
 		{/if}

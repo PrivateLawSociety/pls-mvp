@@ -1,68 +1,55 @@
+import { goto } from '$app/navigation';
+import { NETWORK } from '$lib/bitcoin';
 import type { ECPairInterface } from 'ecpair';
-import { hashFromJSON, tryParseJSON } from '../utils';
+import { hashFromJSON } from 'pls-core';
 
-export interface PartialContract {
-	arbitratorPubkeys: string[];
-	arbitratorsQuorum: number;
-	clientPubkeys: string[];
-	fileHash: string;
-}
-
-export interface FinishedContractData {
-	arbitratorPubkeys: string[];
-	arbitratorsQuorum: number;
-	clientPubkeys: string[];
-	fileHash: string;
-	multisigAddress: string;
-	signatures: Record<string, string>;
-}
+import {
+	contractSchema,
+	type Contract,
+	type UnsignedContract,
+	unsignedContractSchema
+} from 'pls-full';
 
 export function tryParseFinishedContract(stringifiedContract: string) {
-	const maybecontractData = tryParseJSON<FinishedContractData>(stringifiedContract);
+	const json = JSON.parse(stringifiedContract);
+	const parsed = contractSchema.safeParse(json);
 
-	if (
-		!maybecontractData ||
-		!maybecontractData.arbitratorPubkeys ||
-		!maybecontractData.arbitratorsQuorum ||
-		!maybecontractData.clientPubkeys ||
-		!maybecontractData.fileHash ||
-		!maybecontractData.multisigAddress ||
-		!maybecontractData.signatures
-	)
+	if (parsed.success) {
+		if (NETWORK.name !== parsed.data.collateral.network) {
+			alert(
+				`This contract is on the ${parsed.data.collateral.network} network, please switch to it`
+			);
+			goto('/');
+			return null;
+		}
+
+		return parsed.data;
+	} else {
+		alert('Error validating contract');
 		return null;
-
-	return maybecontractData;
+	}
 }
 
 /**
  * @description This ensures that other fields are excluded, so that they don't affect the final hash
  */
-function getMinimalPartialContract(partialContract: PartialContract): PartialContract {
-	return {
-		arbitratorPubkeys: partialContract.arbitratorPubkeys,
-		arbitratorsQuorum: partialContract.arbitratorsQuorum,
-		clientPubkeys: partialContract.clientPubkeys,
-		fileHash: partialContract.fileHash
-	};
+function getMinimalUnsignedContract(unsignedContract: UnsignedContract): UnsignedContract {
+	return unsignedContractSchema.strip().parse(unsignedContract);
 }
 
-export async function signPartialContract(
+export async function signContract(
 	signer: {
 		signSchnorr(hash: Buffer): Promise<Buffer> | Buffer;
 	},
-	partialContract: PartialContract
+	unsignedContract: UnsignedContract
 ) {
 	const signature = await signer.signSchnorr(
-		hashFromJSON(getMinimalPartialContract(partialContract))
+		hashFromJSON(getMinimalUnsignedContract(unsignedContract))
 	);
 
 	return signature;
 }
 
-export function verifyPartialContract(
-	keypair: ECPairInterface,
-	partialContract: PartialContract,
-	signature: Buffer
-) {
-	return keypair.verifySchnorr(hashFromJSON(getMinimalPartialContract(partialContract)), signature);
+export function verifyContract(keypair: ECPairInterface, contract: Contract, signature: Buffer) {
+	return keypair.verifySchnorr(hashFromJSON(getMinimalUnsignedContract(contract)), signature);
 }

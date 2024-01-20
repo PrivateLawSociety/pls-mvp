@@ -1,14 +1,5 @@
 import { createHash } from 'crypto';
 
-// this should probably be replaced by something safer later
-export function tryParseJSON<T>(json: string) {
-	try {
-		return JSON.parse(json) as T;
-	} catch (error) {
-		return null;
-	}
-}
-
 /**
  * @description Sorts an object's properties
  */
@@ -65,12 +56,12 @@ export function formatDateTime(date: Date) {
 	return `${dateTime} - ${hourTime}`;
 }
 
-export function downloadBlob(blob: Blob) {
+export function downloadBlob(blob: Blob, filename: string) {
 	const a = document.createElement('a');
 	const url = window.URL.createObjectURL(blob);
 	a.href = url;
-	a.download = 'contract_data.json';
+	a.download = filename;
 
-	a.click();	
+	a.click();
 	window.URL.revokeObjectURL(url);
 }

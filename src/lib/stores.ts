@@ -46,4 +46,4 @@ export let peopleMetadata = (() => {
 	};
 })();
 
-export let contractDataFileStore = writable<File | null>(null)
+export let contractDataFileStore = writable<File | null>(null);
