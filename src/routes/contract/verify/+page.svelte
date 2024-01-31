@@ -39,6 +39,9 @@
 	function isSignatureValid(contractData: Contract, pubkey: string) {
 		const ecpair = ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'));
 		const signature = contractData.signatures[pubkey];
+
+		if (!signature) return false;
+
 		const isValid = verifyContract(ecpair, contractData, Buffer.from(signature, 'hex'));
 
 		return isValid;
@@ -57,11 +60,11 @@
 				<div class="flex flex-wrap gap-4">
 					{#each contractData.document.pubkeys.clients as pubkey}
 						{@const valid = isSignatureValid(contractData, pubkey)}
-						<div class="flex flex-col">
+						<div class="flex flex-col items-center">
 							<Person {pubkey} />
 							<p>
 								<span class="text-2xl">{valid ? '✅' : '❌'}</span>
-								<span class="font-bold">{valid ? 'Signed' : 'Invalid'}</span>
+								<span class="font-bold">{valid ? 'Signed' : 'Unsigned'}</span>
 							</p>
 						</div>
 					{/each}

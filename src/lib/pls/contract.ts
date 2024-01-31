@@ -26,6 +26,7 @@ export function tryParseFinishedContract(stringifiedContract: string) {
 		return parsed.data;
 	} else {
 		alert('Error validating contract');
+		console.log(parsed.error);
 		return null;
 	}
 }

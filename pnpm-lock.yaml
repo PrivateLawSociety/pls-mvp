@@ -24,8 +24,8 @@ dependencies:
     specifier: ^1.16.0
     version: 1.16.0(typescript@5.2.2)
   pls-lib:
-    specifier: github:marcusmmmz/pls-lib
-    version: github.com/marcusmmmz/pls-lib/48b7b9cb0b8f7a4c15174683a110ed3d22a3a7d0
+    specifier: github:PrivateLawSociety/pls-lib
+    version: github.com/PrivateLawSociety/pls-lib/5d7e963f0c64cb67afc7d61e1a6f92fa40b6cb4c
   qrcode-generator:
     specifier: ^1.4.4
     version: 1.4.4
@@ -2633,8 +2633,8 @@ packages:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
     dev: false
 
-  github.com/marcusmmmz/pls-lib/48b7b9cb0b8f7a4c15174683a110ed3d22a3a7d0:
-    resolution: {tarball: https://codeload.github.com/marcusmmmz/pls-lib/tar.gz/48b7b9cb0b8f7a4c15174683a110ed3d22a3a7d0}
+  github.com/PrivateLawSociety/pls-lib/5d7e963f0c64cb67afc7d61e1a6f92fa40b6cb4c:
+    resolution: {tarball: https://codeload.github.com/PrivateLawSociety/pls-lib/tar.gz/5d7e963f0c64cb67afc7d61e1a6f92fa40b6cb4c}
     name: pls-lib
     version: 0.0.0
     engines: {node: '>=18'}
