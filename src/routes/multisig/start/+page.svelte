@@ -45,6 +45,8 @@
 
 	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
 
+	let replacingByFee = false;
+
 	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0) ?? 0;
 
 	$: feeAmount = availableBalance - addresses.reduce((acc, cv) => acc + cv.value, 0);
@@ -115,14 +117,19 @@
 
 			const unconfirmedUtxos: UTXO[] = [];
 
+			const address = contractData.collateral.multisigAddress;
+
 			unconfirmedTxs.forEach((tx) =>
-				tx.vin.forEach((vin) =>
-					unconfirmedUtxos.push({
-						txid: vin.txid,
-						value: vin.prevout.value,
-						vout: vin.vout
+				tx.vin
+					.filter((vin) => vin.prevout.scriptpubkey_address === address)
+					.forEach((vin) => {
+						replacingByFee = true;
+						return unconfirmedUtxos.push({
+							txid: vin.txid,
+							value: vin.prevout.value,
+							vout: vin.vout
+						});
 					})
-				)
 			);
 
 			utxos = [...(utxos ?? []), ...unconfirmedUtxos];
@@ -264,19 +271,33 @@
 		<h1 class="text-3xl font-bold">Start withdraw from contract</h1>
 
 		{#if contractData}
-			<p class="text-xl">
-				Available balance: {availableBalance === undefined
-					? 'Loading...'
-					: `${availableBalance} sats`}
-			</p>
-			{#if timelockDays === undefined}
-				<Button on:click={() => (timelockDays = 90)}>Add timelock</Button>
-			{:else}
-				<LabelledInput
-					type="number"
-					label="Days until the timelock's unlocked"
-					bind:value={timelockDays}
-				/>
+			<div class="flex gap-4 items-center">
+				<p class="text-xl">
+					Available balance: {availableBalance === undefined
+						? 'Loading...'
+						: `${availableBalance} sats`}
+				</p>
+				{#if replacingByFee}
+					<div
+						class="px-3 py-2 rounded-lg text-black bg-green-600 font-bold"
+						title="This transaction is replacing a previous one"
+					>
+						RBF
+					</div>
+				{/if}
+			</div>
+
+			<!-- I should implement this for liquid later -->
+			{#if !NETWORK.isLiquid}
+				{#if timelockDays === undefined}
+					<Button on:click={() => (timelockDays = 90)}>Add timelock</Button>
+				{:else}
+					<LabelledInput
+						type="number"
+						label="Days until the timelock's unlocked"
+						bind:value={timelockDays}
+					/>
+				{/if}
 			{/if}
 
 			{#each addresses as _, i}

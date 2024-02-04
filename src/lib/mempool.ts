@@ -27,11 +27,8 @@ export async function getTransactionHexFromId(txId: string) {
 		const res = await fetch(`${MEMPOOL_API_URL}/tx/${txId}/hex`);
 
 		if (!res.ok) {
-			console.log(res);
 			const text = await res.text();
-			if (text == 'Address on invalid network') {
-				alert('Contract is on the wrong network (testnet vs mainnet)');
-			}
+			console.log(text);
 			return null;
 		}
 
@@ -50,11 +47,8 @@ export async function getAddressUtxos(address: string) {
 		const res = await fetch(`${MEMPOOL_API_URL}/address/${address}/utxo`);
 
 		if (!res.ok) {
-			console.log(res);
 			const text = await res.text();
-			if (text == 'Address on invalid network') {
-				alert('Contract is on the wrong network (testnet vs mainnet)');
-			}
+			console.log(text);
 			return null;
 		}
 
@@ -73,11 +67,8 @@ export async function getAddressUnconfirmedTxs(address: string) {
 		const res = await fetch(`${MEMPOOL_API_URL}/address/${address}/txs/mempool`);
 
 		if (!res.ok) {
-			console.log(res);
 			const text = await res.text();
-			if (text == 'Address on invalid network') {
-				alert('Contract is on the wrong network (testnet vs mainnet)');
-			}
+			console.log(text);
 			return null;
 		}
 
@@ -87,6 +78,7 @@ export async function getAddressUnconfirmedTxs(address: string) {
 				txid: string;
 				vout: number;
 				prevout: {
+					scriptpubkey_address: string;
 					value: number;
 				};
 				sequence: number;
