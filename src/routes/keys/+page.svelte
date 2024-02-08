@@ -56,7 +56,7 @@
 	</div>
 
 	{#if publicKey || $nostrAuth?.pubkey}
-		<p class="text-center">
+		<p class="text-center break-all">
 			Your public key: <br />
 			{$nostrAuth?.pubkey}
 		</p>

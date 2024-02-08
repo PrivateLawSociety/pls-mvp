@@ -23,7 +23,7 @@ This means the arbitrators can't run off with the money by themselves, but they 
 
 [🇧🇷] [Podcast episode about PLS](https://www.youtube.com/watch?v=NGx7h9kpPE8)
 
-[More documentation can be found here](https://private-law-society.gitbook.io/docs/)
+[More documentation can be found here](https://github.com/PrivateLawSociety/pls-mvp/wiki)
 
 ## Developing
 

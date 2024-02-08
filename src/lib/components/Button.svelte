@@ -7,6 +7,6 @@
 	$: styles = disabled ? disabledStyles : normalStyles;
 </script>
 
-<button on:click class="px-3 py-2 rounded-lg text-black {styles} font-bold transition-colors">
+<button on:click class="px-3 py-1 rounded-lg text-black {styles} font-bold transition-colors">
 	<slot />
 </button>

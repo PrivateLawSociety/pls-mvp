@@ -93,13 +93,14 @@
 						<button
 							class="flex items-center p-2 hover:bg-slate-700 cursor-pointer w-full"
 							on:click={() => selectPerson(pubkey)}
+							title={nip19.npubEncode(pubkey)}
 						>
 							<img
 								src={$peopleMetadata[pubkey]?.picture}
 								alt={$peopleMetadata[pubkey]?.name}
 								class="w-12 h-12 rounded-full mr-2 object-contain"
 							/>
-							<span>{$peopleMetadata[pubkey]?.name}</span>
+							<p class="break-all line-clamp-2">{$peopleMetadata[pubkey]?.name}</p>
 						</button>
 					{/each}
 				{/if}
