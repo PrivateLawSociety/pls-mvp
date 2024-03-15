@@ -27,11 +27,11 @@ This means the arbitrators can't run off with the money by themselves, but they 
 
 ## Developing
 
-Once you've downloaded the project and installed dependencies with `npm install`, start a development server:
+Once you've downloaded the project and installed dependencies with `pnpm install`, start a development server:
 
 ```bash
 # `-- --open` opens the website in a new browser tab
-npm run dev -- --open
+pnpm run dev -- --open
 ```
 
 ## Running Locally
@@ -39,7 +39,7 @@ npm run dev -- --open
 To create a production version:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
-You can preview the production build with `npm run preview`.
+You can preview the production build with `pnpm run preview`.
