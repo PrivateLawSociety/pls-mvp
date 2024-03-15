@@ -27,11 +27,11 @@ Isso significa que os árbitros não podem fugir sozinhos com o dinheiro, mas ai
 
 ## Desenvolvimento
 
-Depois de baixar o projeto e instalar as dependências com `npm install`, inicie um servidor de desenvolvimento:
+Depois de baixar o projeto e instalar as dependências com `pnpm install`, inicie um servidor de desenvolvimento:
 
 ```bash
 # `-- --open` abre o site em uma nova aba do navegador
-npm run dev -- --open
+pnpm run dev -- --open
 ```
 
 ## Executando localmente
@@ -39,7 +39,7 @@ npm run dev -- --open
 Para criar uma versão de produção:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
-Você pode ver a compilação de produção com `npm run preview`.
+Você pode ver a compilação de produção com `pnpm run preview`.
