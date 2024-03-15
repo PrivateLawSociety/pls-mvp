@@ -16,18 +16,17 @@
 	} from '$lib/mempool';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
-	import FileDrop from '$lib/components/FileDrop.svelte';
 	import {
 		createLiquidMultisig,
 		getUnblindedUtxoValue,
 		startSpendFromLiquidMultisig
 	} from 'pls-liquid';
+	import DropContract from '$lib/components/DropContract.svelte';
 
 	let utxos: (UTXO & { hex?: string })[] | null = null;
 
 	let contractData: Contract | null = null;
-
-	let myFiles: FileList | undefined;
+	let contractFile: File | null = null;
 
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 
@@ -43,19 +42,13 @@
 
 	let timelockDays: number | undefined = undefined;
 
-	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
-
 	let replacingByFee = false;
+
+	$: if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
 
 	$: availableBalance = utxos?.reduce((acc, utxo) => acc + utxo.value, 0) ?? 0;
 
 	$: feeAmount = availableBalance - addresses.reduce((acc, cv) => acc + cv.value, 0);
-
-	$: {
-		const file = myFiles?.item(0);
-
-		if (file) onFileSelected(file);
-	}
 
 	$: addresses = addresses.filter(({ address }, i) => {
 		if (i === addresses.length - 1) return true; // keep last address empty
@@ -76,9 +69,13 @@
 		nostrAuth.tryLogin();
 	});
 
-	async function onFileSelected(file: File) {
+	async function onContractDataFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
 
+		onContractSelected();
+	}
+
+	async function onContractSelected() {
 		if (!contractData) return;
 
 		utxos = await getAddressUtxos(contractData.collateral.multisigAddress);
@@ -243,17 +240,14 @@
 
 	async function sendViaNostr() {
 		if (!generatedPSBTsMetadata) return;
-
-		const file = myFiles?.item(0) ?? $contractDataFileStore;
-
-		if (!file) return;
+		if (!contractFile) return;
 
 		const payload = JSON.stringify({
 			psbtsMetadata: generatedPSBTsMetadata
 		} as SpendRequestPayload);
 
 		const event = await nostrAuth.makeEvent(SpendRequestEvent, payload, [
-			['h', (await hashFromFile(file)).toString('hex')]
+			['h', (await hashFromFile(contractFile)).toString('hex')]
 		]);
 
 		broadcastToNostr(event);
@@ -315,7 +309,7 @@
 
 			<Button on:click={handleStartSpend}>Start spend</Button>
 		{:else}
-			<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={myFiles} />
+			<DropContract bind:file={contractFile} bind:contractData />
 		{/if}
 	{/if}
 </div>

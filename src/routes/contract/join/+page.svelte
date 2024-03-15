@@ -18,24 +18,21 @@
 	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import FileDrop from '$lib/components/FileDrop.svelte';
 	import { createLiquidMultisig } from 'pls-liquid';
+	import DropDocument from '$lib/components/DropDocument.svelte';
 
 	let contractsData: Record<string, UnsignedContract> = {};
 
 	let contractSignatures: Record<string, Record<string, string>> = {};
 
-	let myFiles: FileList | undefined;
-	let myFileHash: string | undefined;
-	let myFileName: string | undefined;
+	let documentFile: File | undefined;
+	let documentHash: string | undefined;
+	let documentFileName: string | undefined;
 
-	$: {
-		const file = myFiles?.item(0);
-
-		if (file)
-			hashFromFile(file).then((hash) => {
-				myFileHash = hash.toString('hex');
-				myFileName = file.name;
-			});
-	}
+	$: if (documentFile)
+		hashFromFile(documentFile).then((hash) => {
+			documentHash = hash.toString('hex');
+			documentFileName = documentFile!.name;
+		});
 
 	onMount(async () => {
 		if (await nostrAuth.tryLogin()) {
@@ -184,14 +181,16 @@
 	}
 
 	function exportContract(fileHash: string) {
-		if (!myFileName) return;
+		if (!documentFileName) return;
 
 		const parsed = contractSchema.safeParse({
 			...contractsData[fileHash],
 			signatures: contractSignatures[fileHash]
 		});
 
-		const fileName = myFileName.includes('.') ? myFileName.split('.')[0] : myFileName;
+		const fileName = documentFileName.includes('.')
+			? documentFileName.split('.')[0]
+			: documentFileName;
 
 		if (parsed.success)
 			downloadBlob(new Blob([JSON.stringify(parsed.data, null, 4)]), `${fileName}.json`);
@@ -233,9 +232,9 @@
 			</div>
 			<p>{data.collateral.arbitratorsQuorum} arbitrators need to agree</p>
 
-			<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={myFiles} />
+			<DropDocument bind:file={documentFile} />
 
-			{#if data.document.fileHash === myFileHash}
+			{#if data.document.fileHash === documentHash}
 				{#key contractSignatures}
 					<Button
 						on:click={() => handleApprove(data.document.fileHash)}
@@ -244,7 +243,7 @@
 							: true}>Approve</Button
 					>
 				{/key}
-			{:else if myFileHash !== undefined}
+			{:else if documentHash !== undefined}
 				<p>Contract text doesn't match!</p>
 			{/if}
 

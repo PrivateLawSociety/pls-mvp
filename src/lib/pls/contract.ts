@@ -11,23 +11,27 @@ import {
 } from 'pls-full';
 
 export function tryParseFinishedContract(stringifiedContract: string) {
-	const json = JSON.parse(stringifiedContract);
-	const parsed = contractSchema.safeParse(json);
-
-	if (parsed.success) {
-		if (NETWORK.name !== parsed.data.collateral.network) {
-			alert(
-				`This contract is on the ${parsed.data.collateral.network} network, please switch to it`
-			);
-			goto('/');
+	try {
+		const json = JSON.parse(stringifiedContract);
+		const parsed = contractSchema.safeParse(json);
+	
+		if (parsed.success) {
+			if (NETWORK.name !== parsed.data.collateral.network) {
+				alert(
+					`This contract is on the ${parsed.data.collateral.network} network, please switch to it`
+				);
+				goto('/');
+				return null;
+			}
+	
+			return parsed.data;
+		} else {
+			alert('Error validating contract');
+			console.log(parsed.error);
 			return null;
 		}
-
-		return parsed.data;
-	} else {
-		alert('Error validating contract');
-		console.log(parsed.error);
-		return null;
+	} catch {
+		return null
 	}
 }
 
