@@ -54,7 +54,9 @@
 			{#if selectedPerson}
 				<Person pubkey={selectedPerson} />
 			{:else}
-				<div class="w-20 h-20 bg-gray-300 rounded-full" />
+				
+			<img src="/profil.png" alt="Profile picture" class="w-20 h-20 bg-gray-300 rounded-full" aria-hidden="true" />
+
 				<p>Unselected</p>
 			{/if}
 		</button>

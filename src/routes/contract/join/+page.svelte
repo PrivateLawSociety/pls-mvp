@@ -233,7 +233,7 @@
 			</div>
 			<p>{data.collateral.arbitratorsQuorum} arbitrators need to agree</p>
 
-			<FileDrop dropText={'Drop contract text here'} bind:files={myFiles} />
+			<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={myFiles} />
 
 			{#if data.document.fileHash === myFileHash}
 				{#key contractSignatures}

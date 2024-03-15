@@ -16,9 +16,10 @@
 	}
 </script>
 
-<div class="flex flex-col items-center justify-center h-screen w-full gap-4">
+<div class="flex text-2xl flex-col items-center justify-center h-screen w-full gap-4">
+	<h1 class="text-5xl pb-10">Secure Your Agreements with Bitcoin</h1>
 	<Button>
-		<a href="/contract/create">Create contract</a>
+		<a href="/contract/create">Create a new contract</a>
 	</Button>
 	<p>Or</p>
 	<Button>
@@ -26,5 +27,5 @@
 	</Button>
 	<p>Or</p>
 	<p>if you already have a contract, view its options here:</p>
-	<FileDrop dropText={'Drop contract data here'} bind:files />
+	<FileDrop dropText={'Drop your contract JSON here'} bind:files />
 </div>

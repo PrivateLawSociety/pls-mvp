@@ -299,7 +299,7 @@
 		<FileDrop dropText={'Drop PSBT here'} bind:files={psbtFiles} />
 		{#if !myFiles?.length && !$contractDataFileStore}
 			<p>or from nostr:</p>
-			<FileDrop dropText={'Drop contract data here'} bind:files={myFiles} />
+			<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={myFiles} />
 		{:else}
 			<p>Waiting for a nostr event</p>
 		{/if}

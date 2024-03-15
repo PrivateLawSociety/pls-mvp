@@ -97,7 +97,7 @@
 
 		{@const valid = contractData.document.fileHash === contractTextHash}
 		{#if !contractTextHash || !valid}
-			<FileDrop dropText={'Drop contract text here'} bind:files={contractTextFile} />
+			<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={contractTextFile} />
 		{/if}
 		{#if contractTextFile}
 			<p>
@@ -123,6 +123,6 @@
 			</a>
 		</div>
 	{:else}
-		<FileDrop dropText={'Drop contract data file here'} bind:files={contractDataFiles} />
+		<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={contractDataFiles} />
 	{/if}
 </div>

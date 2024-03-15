@@ -315,7 +315,7 @@
 
 			<Button on:click={handleStartSpend}>Start spend</Button>
 		{:else}
-			<FileDrop dropText={'Drop contract data here'} bind:files={myFiles} />
+			<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={myFiles} />
 		{/if}
 	{/if}
 </div>

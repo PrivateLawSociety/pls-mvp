@@ -106,14 +106,17 @@
 <div class="flex justify-center">
 	<div class="flex flex-col gap-4 w-1/2">
 		<div>
+			<h1 class="text-2xl pb-8">Select Contract Parties:</h1>
 			<span>Clients ({clients.length})</span>
-			<div class="flex gap-4">
+			<div class="flex gap-4 pb-6">
 				<PersonChooser people={contactsAndMe} bind:selectedPerson={clients[0]} />
 				<PersonChooser people={contactsAndMe} bind:selectedPerson={clients[1]} />
 			</div>
 		</div>
 
 		<div>
+			<h1 class="text-2xl pb-8">Select Arbitrators:</h1>
+
 			<span>Arbitrators ({arbitrators.length})</span>
 			<div class="flex gap-4">
 				{#each arbitrators as _, i}
@@ -139,17 +142,22 @@
 		</div>
 
 		<label>
-			Arbitrators quorum:
+			
+			<div class="text-2xl">Arbitrators quorum:
 			<input
-				class="border border-gray-300 bg-transparent"
+				class="border border-gray-300 bg-transparent text-center"
 				type="number"
 				bind:value={arbitratorsQuorum}
 				min={0}
 				max={arbitrators.length}
 			/>
+			</div>
+			The minimum number of arbitrators that need to be present to make a decision.
 		</label>
 
-		<FileDrop dropText={'Drop contract text here'} bind:files={myFiles} />
-		<Button on:click={requestSignatures}>Request signatures</Button>
+		<FileDrop dropText={'Drop the contract file here (txt, pdf, word file)'} bind:files={myFiles} />
+		<div class="pb-8 w-1/2">
+		<Button on:click={requestSignatures}>Request signatures</Button >
+			</div>
 	</div>
 </div>

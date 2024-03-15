@@ -21,9 +21,11 @@
 			{/if}
 		</div>
 		<div class="flex items-center justify-center gap-4 w-full p-2">
-			<a class="text-3xl text-center cursor-pointer" href="/">🏠</a>
+			{#if $page.url.pathname != '/'}
+			<a class="text-lg text-center cursor-pointer" href="/">Home</a>
+			{/if}
 			{#if !isTestnet}
-				<h1 class="font-bold text-3xl bg-[#ff0000]">☣️ ALPHA ⚠️ SOFTWARE ☢️</h1>
+				<h1 class="font-bold text-md bg-[#ff0000]">☣️ ALPHA SOFTWARE</h1>
 			{/if}
 			<select
 				class="text-black"
@@ -51,4 +53,14 @@
 	</div>
 
 	<slot />
+	<hr class="border-t border-gray-600 mt-8 mb-2" />
+
+	<footer class="p-4 bg-gray-800 text-white">
+    <div class="flex justify-center space-x-4">
+        <a href="https://www.privatelawsociety.net/join" target="_blank" rel="noopener noreferrer">Discord</a>
+        <a href="https://twitter.com/PrivateLawSoc" target="_blank" rel="noopener noreferrer">Twitter</a>
+        <a href="https://www.youtube.com/@privatelawsociety" target="_blank" rel="noopener noreferrer">Youtube</a>
+				<a href="https://github.com/PrivateLawSociety/" target="_blank" rel="noopener noreferrer">Github</a>
+    </div>
+</footer>
 </div>
