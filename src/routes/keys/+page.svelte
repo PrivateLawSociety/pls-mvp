@@ -43,7 +43,7 @@
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
 	{#if !$nostrAuth?.privkey && $nostrAuth?.pubkey}
-		<p>Logged in with nostr extension!</p>
+		<h1 class="text-3xl">Logged in with nostr extension!</h1>
 	{/if}
 
 	<Button on:click={handleGenerateKeypair}>
@@ -56,7 +56,7 @@
 	</div>
 
 	{#if publicKey || $nostrAuth?.pubkey}
-		<p class="text-center break-all">
+		<p class="text-center break-all px-2">
 			Your public key: <br />
 			{$nostrAuth?.pubkey}
 		</p>

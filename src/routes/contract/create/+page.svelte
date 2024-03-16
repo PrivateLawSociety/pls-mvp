@@ -101,7 +101,7 @@
 </script>
 
 <div class="flex justify-center">
-	<div class="flex flex-col gap-4 w-1/2">
+	<div class="flex flex-col gap-4 w-2/3">
 		<div>
 			<h1 class="text-2xl pb-8">Select Contract Parties:</h1>
 			<span>Clients ({clients.length})</span>
@@ -153,7 +153,7 @@
 		</label>
 
 		<DropDocument bind:file={documentFile} />
-		<div class="pb-8 w-1/2">
+		<div class="pb-8 w-full text-center">
 			<Button on:click={requestSignatures}>Request signatures</Button>
 		</div>
 	</div>
