@@ -17,8 +17,9 @@
 		getTapscriptSigsOrdered,
 		signTaprootTransaction
 	} from 'pls-liquid';
+	import type { Contract } from 'pls-full';
+	import DropDocument from '$lib/components/DropDocument.svelte';
 	import { tryParseFinishedContract } from '$lib/pls/contract';
-	import type { UnsignedContract } from 'pls-full';
 
 	let psbtsMetadataStringified = '';
 
@@ -27,11 +28,9 @@
 	let generatedPSBTsMetadata: PsbtMetadata[] | null = null;
 	let generatedTransactionHex: string | null = null;
 
-	let contractData: UnsignedContract | null = null;
-
-	let myFiles: FileList | undefined;
-
-	let psbtFiles: FileList | undefined;
+	let contractData: Contract | null = null;
+	let contractFile: File | null;
+	let psbtFiles: FileList | null;
 
 	$: {
 		const file = psbtFiles?.item(0);
@@ -39,15 +38,15 @@
 		if (file) file.text().then((text) => (psbtsMetadataStringified = text));
 	}
 
-	if ($contractDataFileStore) onFileSelected($contractDataFileStore);
-
-	$: {
-		const file = myFiles?.item(0);
-
-		if (file) onFileSelected(file);
-	}
+	$: if (contractData) onContractSelected();
 
 	$: userShownData = getUserShownData(psbtsMetadata);
+
+	$: if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
+
+	async function onContractDataFileSelected(file: File) {
+		contractData = tryParseFinishedContract(await file.text());
+	}
 
 	function getUserShownData(_: any) {
 		if (!psbtsMetadata) return null;
@@ -99,25 +98,22 @@
 		nostrAuth.tryLogin();
 	});
 
-	async function onFileSelected(file: File) {
-		contractData = tryParseFinishedContract(await file.text());
+	async function onContractSelected() {
+		if (!contractFile) return;
+		if (!$nostrAuth?.pubkey) return;
 
-		if (!contractData) return;
+		relayPool
+			.sub(relayList, [
+				{
+					kinds: [SpendRequestEvent],
+					'#h': [(await hashFromFile(contractFile)).toString('hex')]
+				}
+			])
+			.on('event', async (e) => {
+				const { psbtsMetadata } = JSON.parse(e.content) as SpendRequestPayload;
 
-		if (file && $nostrAuth?.pubkey) {
-			relayPool
-				.sub(relayList, [
-					{
-						kinds: [SpendRequestEvent],
-						'#h': [(await hashFromFile(file)).toString('hex')]
-					}
-				])
-				.on('event', async (e) => {
-					const { psbtsMetadata } = JSON.parse(e.content) as SpendRequestPayload;
-
-					psbtsMetadataStringified = JSON.stringify(psbtsMetadata);
-				});
-		}
+				psbtsMetadataStringified = JSON.stringify(psbtsMetadata);
+			});
 	}
 
 	// for security reasons, check if all PSBTs are equivalent before signing
@@ -274,17 +270,14 @@
 
 	async function sendViaNostr() {
 		if (!generatedPSBTsMetadata) return;
-
-		const file = myFiles?.item(0) ?? $contractDataFileStore;
-
-		if (!file) return;
+		if (!contractFile) return;
 
 		const payload = JSON.stringify({
 			psbtsMetadata: generatedPSBTsMetadata
 		} as SpendRequestPayload);
 
 		const event = await nostrAuth.makeEvent(SpendRequestEvent, payload, [
-			['h', (await hashFromFile(file)).toString('hex')]
+			['h', (await hashFromFile(contractFile)).toString('hex')]
 		]);
 
 		broadcastToNostr(event);
@@ -297,9 +290,9 @@
 		<LabelledInput type="text" label="PSBT hex" bind:value={psbtsMetadataStringified} />
 		<p>or</p>
 		<FileDrop dropText={'Drop PSBT here'} bind:files={psbtFiles} />
-		{#if !myFiles?.length && !$contractDataFileStore}
+		{#if !contractFile && !$contractDataFileStore}
 			<p>or from nostr:</p>
-			<FileDrop dropText={'Drop contract data here'} bind:files={myFiles} />
+			<DropDocument bind:file={contractFile} />
 		{:else}
 			<p>Waiting for a nostr event</p>
 		{/if}

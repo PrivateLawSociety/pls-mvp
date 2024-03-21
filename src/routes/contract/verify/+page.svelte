@@ -4,33 +4,22 @@
 	import { hashFromFile } from '$lib/utils';
 	import Person from '$lib/components/Person.svelte';
 	import { ECPair } from '$lib/bitcoin';
-	import { contractDataFileStore } from '$lib/stores';
-	import FileDrop from '$lib/components/FileDrop.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import DropDocument from '$lib/components/DropDocument.svelte';
+	import DropContract from '$lib/components/DropContract.svelte';
+	import { contractDataFileStore } from '$lib/stores';
 
-	export let contractDataFiles: FileList | undefined;
-
-	let contractTextFile: FileList | undefined;
-	let contractTextHash: string;
+	let documentFile: File | null;
+	let documentHash: string;
 
 	let contractData: Contract | null = null;
 
-	if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
+	$: if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
 
-	$: {
-		const file = contractDataFiles?.item(0);
-
-		if (file) onContractDataFileSelected(file);
-	}
-
-	$: {
-		const file = contractTextFile?.item(0);
-
-		if (file)
-			hashFromFile(file).then((hash) => {
-				contractTextHash = hash.toString('hex');
-			});
-	}
+	$: if (documentFile)
+		hashFromFile(documentFile).then((hash) => {
+			documentHash = hash.toString('hex');
+		});
 
 	async function onContractDataFileSelected(file: File) {
 		contractData = tryParseFinishedContract(await file.text());
@@ -95,11 +84,11 @@
 			{quorum == 1 ? 'arbitrator' : 'arbitrators'} constitute{quorum == 1 ? 's' : ''} a decision
 		</p>
 
-		{@const valid = contractData.document.fileHash === contractTextHash}
-		{#if !contractTextHash || !valid}
-			<FileDrop dropText={'Drop contract text here'} bind:files={contractTextFile} />
+		{@const valid = contractData.document.fileHash === documentHash}
+		{#if !documentHash || !valid}
+			<DropDocument bind:file={documentFile} />
 		{/if}
-		{#if contractTextFile}
+		{#if documentFile}
 			<p>
 				<span class="text-2xl">{valid ? '✅' : '❌'}</span>
 				Contract text
@@ -123,6 +112,6 @@
 			</a>
 		</div>
 	{:else}
-		<FileDrop dropText={'Drop contract data file here'} bind:files={contractDataFiles} />
+		<DropContract bind:contractData />
 	{/if}
 </div>

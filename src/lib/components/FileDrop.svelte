@@ -1,7 +1,7 @@
 <script lang="ts">
 	let isDragging = false;
 
-	export let files: FileList | undefined;
+	export let files: FileList | null;
 
 	export let dropText = 'Drop files here';
 
