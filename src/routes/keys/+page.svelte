@@ -1,10 +1,10 @@
 <script lang="ts">
-	import Button from '$lib/components/Button.svelte';
-	import LabelledInput from '$lib/components/LabelledInput.svelte';
 	import type { ECPairInterface } from 'ecpair';
 	import { nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
+	import { Button } from 'flowbite-svelte';
+	import { goto } from '$app/navigation';
 
 	let wifKey = $nostrAuth?.privkey ?? '';
 	let ecpair: ECPairInterface | null = null;
@@ -26,39 +26,24 @@
 	onMount(() => {
 		if (window.nostr) nostrAuth.tryLogin();
 	});
-
-	function handleGenerateKeypair() {
-		ecpair = ECPair.makeRandom({
-			network: NETWORK.network
-		});
-
-		wifKey = ecpair.toWIF();
-	}
-
-	function copyToClipboard() {
-		navigator.clipboard.writeText(wifKey);
-		setTimeout(() => alert('Copied private key to clipboard, store it safely and privately!'), 0);
-	}
 </script>
 
 <div class="flex flex-col items-center justify-center h-screen w-full gap-4">
 	{#if !$nostrAuth?.privkey && $nostrAuth?.pubkey}
-		<h1 class="text-3xl">Logged in with nostr extension!</h1>
+		<h1 class="text-3xl text-center">Logged in with nostr browser extension</h1>
 	{/if}
-
-	<Button on:click={handleGenerateKeypair}>
-		<a href="/keys">Generate new keys</a>
-	</Button>
-
-	<div class="flex items-end gap-2">
-		<LabelledInput type="text" label="Your WIF key or private key" bind:value={wifKey} />
-		<Button on:click={copyToClipboard} disabled={wifKey === ''}>📋 Copy</Button>
-	</div>
 
 	{#if publicKey || $nostrAuth?.pubkey}
 		<p class="text-center break-all px-2">
-			Your public key: <br />
+			Your public ID: <br />
 			{$nostrAuth?.pubkey}
 		</p>
+
+		<Button
+			on:click={() => {
+				nostrAuth.signOut();
+				goto('/');
+			}}>Sign out</Button
+		>
 	{/if}
 </div>

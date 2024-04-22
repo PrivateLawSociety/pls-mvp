@@ -35,14 +35,19 @@
 		"vite-plugin-wasm": "^3.2.2"
 	},
 	"dependencies": {
+		"@popperjs/core": "^2.11.8",
 		"@vulpemventures/secp256k1-zkp": "^3.1.0",
 		"bitcoinjs-lib": "^6.1.4",
 		"buffer": "^6.0.3",
 		"ecpair": "^2.1.0",
+		"flowbite": "^2.3.0",
+		"flowbite-svelte": "^0.45.0",
+		"flowbite-svelte-icons": "^1.5.0",
 		"liquidjs-lib": "6.0.2-liquid.32",
 		"nostr-tools": "^1.16.0",
 		"pls-lib": "github:PrivateLawSociety/pls-lib",
 		"qrcode-generator": "^1.4.4",
+		"tailwind-merge": "^2.2.2",
 		"tiny-secp256k1": "^2.2.3",
 		"zod": "^3.22.4"
 	}

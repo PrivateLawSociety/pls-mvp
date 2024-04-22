@@ -65,7 +65,17 @@ export function getOldestEvent(events: Event[]) {
 }
 
 export let nostrAuth = (() => {
-	const store = writable<{ privkey?: string; pubkey: string } | null>();
+	let initialPrivateKey = sessionStorage.getItem('private-key');
+
+	const store = writable<{ privkey?: string; pubkey: string } | null>(
+		initialPrivateKey
+			? { privkey: initialPrivateKey, pubkey: getPublicKey(initialPrivateKey) }
+			: null
+	);
+
+	store.subscribe((keys) => {
+		if (keys?.privkey) sessionStorage.setItem('private-key', keys.privkey);
+	});
 
 	function loginWithRandomKeys() {
 		const privkey = generatePrivateKey();
@@ -89,6 +99,10 @@ public key: ${pubkey}`
 	}
 
 	return {
+		signOut() {
+			store.set(null);
+			sessionStorage.removeItem('private-key');
+		},
 		loginWithRandomKeys,
 		loginWithPrivkey(privkey: string) {
 			const pubkey = getPublicKey(privkey);

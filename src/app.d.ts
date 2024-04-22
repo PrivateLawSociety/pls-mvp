@@ -18,6 +18,7 @@ declare global {
 				encrypt(pubkey: string, text: string): Promise<string>;
 				decrypt(pubkey: string, data: string): Promise<string>;
 			};
+			enable(): Promise<undefined>;
 		};
 	}
 }
