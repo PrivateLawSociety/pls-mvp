@@ -13,7 +13,7 @@ This means the arbitrators can't run off with the money by themselves, but they 
 
 ## Useful links
 
-[Join the Discord server here](https://www.privatelawsociety.net/join)
+[Join the Discord server here](https://discord.gg/PNE3PZTUNz)
 
 [PLS Youtube channel](https://www.youtube.com/@privatelawsociety)
 
