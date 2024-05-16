@@ -18,7 +18,8 @@
 	"devDependencies": {
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@sveltejs/adapter-auto": "^2.0.0",
-		"@sveltejs/kit": "^1.20.4",
+		"@sveltejs/adapter-vercel": "^3.1.0",
+		"@sveltejs/kit": "^1.30.4",
 		"autoprefixer": "^10.4.14",
 		"postcss": "^8.4.24",
 		"postcss-load-config": "^4.0.1",
@@ -36,7 +37,7 @@
 	},
 	"dependencies": {
 		"@popperjs/core": "^2.11.8",
-		"@vulpemventures/secp256k1-zkp": "^3.1.0",
+		"@vulpemventures/secp256k1-zkp": "3.1.0",
 		"bitcoinjs-lib": "^6.1.4",
 		"buffer": "^6.0.3",
 		"ecpair": "^2.1.0",

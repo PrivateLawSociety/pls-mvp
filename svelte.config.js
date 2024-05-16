@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-vercel';
 import { vitePreprocess } from '@sveltejs/kit/vite';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -21,7 +21,7 @@ const config = {
 			// 'pls-liquid': '../pls-lib/packages/pls-liquid',
 			// 'pls-nostr': '../pls-lib/packages/pls-nostr'
 		},
-		adapter: adapter()
+		adapter: adapter({ runtime: 'nodejs20.x' })
 	}
 };
 

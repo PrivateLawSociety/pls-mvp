@@ -38,5 +38,10 @@ export default defineConfig({
 				})
 			]
 		}
+	},
+	build: {
+		rollupOptions: {
+			external: ['@vulpemventures/secp256k1-zkp']
+		}
 	}
 });
