@@ -6,7 +6,7 @@
 		ContractApprovalEvent,
 		type ContractRequestPayload,
 		type ContractApprovalPayload
-	} from '../create/shared';
+	} from '../shared';
 
 	import { contractSchema, type UnsignedContract } from 'pls-full';
 
@@ -16,7 +16,6 @@
 	import { downloadBlob, hashFromFile } from '$lib/utils';
 	import { createBitcoinMultisig } from 'pls-bitcoin';
 	import { ECPair, NETWORK } from '$lib/bitcoin';
-	import FileDrop from '$lib/components/FileDrop.svelte';
 	import { createLiquidMultisig } from 'pls-liquid';
 	import DropDocument from '$lib/components/DropDocument.svelte';
 

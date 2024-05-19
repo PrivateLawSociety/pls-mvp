@@ -2,7 +2,7 @@
 	import Person from '$lib/components/Person.svelte';
 	import { nostrAuth } from '$lib/nostr';
 	import { Button, P } from 'flowbite-svelte';
-	import { DiscordSolid, GithubSolid, TwitterSolid, YoutubeSolid } from 'flowbite-svelte-icons';
+	import { DiscordSolid, GithubSolid, YoutubeSolid, XSolid } from 'flowbite-svelte-icons';
 </script>
 
 {#if $nostrAuth?.pubkey}
@@ -17,7 +17,7 @@
 			</a>
 
 			<a href="/contract/join" class="w-full md:w-auto">
-				<Button class="w-48 md:w-64">Join</Button>
+				<Button class="w-48 md:w-64">Sign</Button>
 			</a>
 
 			<a href="/contract/verify" class="w-full md:w-auto">
@@ -50,8 +50,8 @@
 		<a href="https://www.privatelawsociety.net/join" target="_blank" rel="noopener noreferrer">
 			<DiscordSolid class="hover:text-primary-600 active:text-primary-800" size="xl" />
 		</a>
-		<a href="https://twitter.com/PrivateLawSoc" target="_blank" rel="noopener noreferrer">
-			<TwitterSolid class="hover:text-primary-600 active:text-primary-800" size="xl" />
+		<a href="https://x.com/PrivateLawSoc" target="_blank" rel="noopener noreferrer">
+			<XSolid class="hover:text-primary-600 active:text-primary-800" size="xl" />
 		</a>
 		<a href="https://www.youtube.com/@privatelawsociety" target="_blank" rel="noopener noreferrer">
 			<YoutubeSolid class="hover:text-primary-600 active:text-primary-800" size="xl" />

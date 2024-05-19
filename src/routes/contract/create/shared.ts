@@ -1,17 +1,30 @@
-// maker ---> takers
-export interface ContractRequestPayload {
-	arbitratorPubkeys: string[];
-	arbitratorsQuorum: number;
-	clientPubkeys: string[];
-	fileHash: string;
+import { getOldestEvent, nostrNowBasic, relayList, relayPool } from '$lib/nostr';
+import { peopleMetadata } from '$lib/stores';
+
+export interface NewContractData {
+	fileName?: string;
+	fileHash?: string;
+	clients?: [string | null, string | null];
+	arbitrators?: string[];
+	arbitratorsQuorum?: number;
 }
 
-// taker ---> maker + other takers
-export interface ContractApprovalPayload {
-	signature: string;
-	fileHash: string;
-}
+export async function getContactsInfo(pubkey: string) {
+	const events = await relayPool.list(relayList, [
+		{
+			authors: [pubkey],
+			kinds: [3],
+			until: nostrNowBasic()
+		}
+	]);
 
-// these events are non-standard, I made them up for the purposes of PLS
-export const ContractRequestEvent = 26970;
-export const ContractApprovalEvent = 26971;
+	if (!events) return;
+
+	const event = getOldestEvent(events);
+
+	const contacts = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+
+	contacts.forEach(peopleMetadata.fetchPerson);
+
+	return contacts;
+}

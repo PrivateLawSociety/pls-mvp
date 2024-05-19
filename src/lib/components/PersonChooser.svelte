@@ -12,6 +12,8 @@
 	export let selectedPerson: string | null = null;
 	export let people: string[];
 
+	export let placeholderName = 'Unselected';
+
 	const dispatch = createEventDispatcher();
 
 	let isDropdownOpen = false;
@@ -61,7 +63,7 @@
 					aria-hidden="true"
 				/>
 
-				<p>Unselected</p>
+				<p>{placeholderName}</p>
 			{/if}
 		</button>
 
