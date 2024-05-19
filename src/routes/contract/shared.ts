@@ -4,6 +4,7 @@ export interface ContractRequestPayload {
 	arbitratorsQuorum: number;
 	clientPubkeys: string[];
 	fileHash: string;
+	network: string;
 }
 
 // // taker ---> maker + other takers

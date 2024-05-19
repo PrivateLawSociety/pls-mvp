@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { getNetworkName } from '$lib/bitcoin';
 	import Person from '$lib/components/Person.svelte';
 	import { Button, P } from 'flowbite-svelte';
 	import { getContext } from 'svelte';
@@ -16,6 +15,7 @@
 	$: arbitratorsQuorum = $newContract.arbitratorsQuorum!;
 	$: documentName = $newContract.fileName!;
 	$: documentHash = $newContract.fileHash!;
+	$: network = $newContract.network!;
 
 	async function requestSignatures() {
 		if (!clients[0] || !clients[1]) return alert('Contracts need exactly 2 clients');
@@ -30,7 +30,8 @@
 			arbitratorPubkeys: arbitrators.map((p) => p),
 			arbitratorsQuorum,
 			clientPubkeys: [clients[0], clients[1]],
-			fileHash: documentHash
+			fileHash: documentHash,
+			network
 		} satisfies ContractRequestPayload;
 
 		for (const pubkey of pubkeys) {
@@ -62,7 +63,7 @@
 		{/each}
 	</div>
 	<P size="xl">Arbitrators quorum: <strong>{arbitratorsQuorum}</strong></P>
-	<P size="xl">Network: <strong>{getNetworkName()}</strong></P>
+	<P size="xl">Network: <strong>{network}</strong></P>
 	<P size="xl">File: <strong>{documentName}</strong></P>
 </div>
 <Button class="w-48 md:w-52" on:click={requestSignatures}>Create</Button>

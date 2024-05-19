@@ -7,7 +7,7 @@
 		<li>Only one of the involved parties should create the contract here.</li>
 		<li>After created, the other involved parties will just sign the contract</li>
 	</div>
-	<a href="/contract/create/2">
+	<a href="/contract/create/1">
 		<Button class="w-48 md:w-52">Next</Button>
 	</a>
 </div>

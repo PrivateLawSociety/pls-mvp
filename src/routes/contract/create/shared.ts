@@ -7,6 +7,7 @@ export interface NewContractData {
 	clients?: [string | null, string | null];
 	arbitrators?: string[];
 	arbitratorsQuorum?: number;
+	network?: string;
 }
 
 export async function getContactsInfo(pubkey: string) {
