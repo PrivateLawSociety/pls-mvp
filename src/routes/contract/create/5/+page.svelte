@@ -47,15 +47,15 @@
 
 <P class="text-2xl">Review</P>
 
-<div class="flex flex-col justify-center items-center gap-2">
-	<P size="xl" weight="bold">Clients</P>
+<div class="flex flex-col justify-center items-center gap-2 h-full">
+	<P size="xl" weight="bold">Clients:</P>
 	{#if clients[0] || clients[1]}
 		<div class="flex gap-2">
 			<Person pubkey={clients[0] ?? ''} />
 			<Person pubkey={clients[1] ?? ''} />
 		</div>
 	{/if}
-	<P size="xl" weight="bold">Arbitrators</P>
+	<P size="xl" weight="bold">Arbitrators:</P>
 	<div class="flex gap-2 flex-wrap justify-center">
 		{#each arbitrators as arbitrator}
 			<Person pubkey={arbitrator ?? ''} />
@@ -64,6 +64,5 @@
 	<P size="xl">Arbitrators quorum: <strong>{arbitratorsQuorum}</strong></P>
 	<P size="xl">Network: <strong>{getNetworkName()}</strong></P>
 	<P size="xl">File: <strong>{documentName}</strong></P>
-
-	<Button class="w-48 md:w-52" on:click={requestSignatures}>Create</Button>
 </div>
+<Button class="w-48 md:w-52" on:click={requestSignatures}>Create</Button>
