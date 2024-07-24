@@ -102,18 +102,22 @@
 		if (!contractFile) return;
 		if (!$nostrAuth?.pubkey) return;
 
-		relayPool
-			.sub(relayList, [
+		relayPool.subscribeMany(
+			relayList,
+			[
 				{
 					kinds: [SpendRequestEvent],
 					'#h': [(await hashFromFile(contractFile)).toString('hex')]
 				}
-			])
-			.on('event', async (e) => {
-				const { psbtsMetadata } = JSON.parse(e.content) as SpendRequestPayload;
+			],
+			{
+				onevent(e) {
+					const { psbtsMetadata } = JSON.parse(e.content) as SpendRequestPayload;
 
-				psbtsMetadataStringified = JSON.stringify(psbtsMetadata);
-			});
+					psbtsMetadataStringified = JSON.stringify(psbtsMetadata);
+				}
+			}
+		);
 	}
 
 	// for security reasons, check if all PSBTs are equivalent before signing

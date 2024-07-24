@@ -3,9 +3,9 @@ import {
 	getPublicKey,
 	SimplePool,
 	type Event,
-	getSignature,
-	generatePrivateKey,
-	nip04
+	generateSecretKey,
+	nip04,
+	finalizeEvent
 } from 'nostr-tools';
 import { get, writable } from 'svelte/store';
 import { ECPair, NETWORK } from './bitcoin';
@@ -28,20 +28,15 @@ export async function makeNostrEvent(
 	content: string,
 	tags: string[][]
 ) {
-	const pubkey = getPublicKey(privkey);
-
-	const blankEvent = {
-		kind,
-		content,
-		created_at: nostrNowBasic(),
-		tags,
-		pubkey
-	} as Event;
-
-	blankEvent.id = getEventHash(blankEvent);
-	blankEvent.sig = getSignature(blankEvent, privkey);
-
-	return blankEvent;
+	return finalizeEvent(
+		{
+			content,
+			created_at: nostrNowBasic(),
+			kind,
+			tags
+		},
+		Buffer.from(privkey, 'hex')
+	);
 }
 
 export function nostrNowAdjusted() {
@@ -69,7 +64,10 @@ export let nostrAuth = (() => {
 
 	const store = writable<{ privkey?: string; pubkey: string } | null>(
 		initialPrivateKey
-			? { privkey: initialPrivateKey, pubkey: getPublicKey(initialPrivateKey) }
+			? {
+					privkey: initialPrivateKey,
+					pubkey: getPublicKey(Uint8Array.from(Buffer.from(initialPrivateKey, 'hex')))
+			  }
 			: null
 	);
 
@@ -78,7 +76,8 @@ export let nostrAuth = (() => {
 	});
 
 	function loginWithRandomKeys() {
-		const privkey = generatePrivateKey();
+		const privkey = generateSecretKey();
+		const privkeyStr = Buffer.from(privkey).toString('hex');
 		const pubkey = getPublicKey(privkey);
 
 		navigator.clipboard.writeText(
@@ -91,7 +90,7 @@ public key: ${pubkey}`
 		);
 
 		store.set({
-			privkey,
+			privkey: privkeyStr,
 			pubkey
 		});
 
@@ -105,7 +104,7 @@ public key: ${pubkey}`
 		},
 		loginWithRandomKeys,
 		loginWithPrivkey(privkey: string) {
-			const pubkey = getPublicKey(privkey);
+			const pubkey = getPublicKey(Uint8Array.from(Buffer.from(privkey, 'hex')));
 
 			store.set({
 				privkey,
@@ -153,21 +152,19 @@ public key: ${pubkey}`
 		async makeEvent(kind: number, content: string, tags: string[][]) {
 			const { pubkey, privkey } = get(store)!;
 
-			const blankEvent = {
-				kind,
-				content,
-				created_at: nostrNowBasic(),
-				tags,
-				pubkey
-			} as Event;
-
-			blankEvent.id = getEventHash(blankEvent);
-
 			if (privkey) {
-				blankEvent.sig = getSignature(blankEvent, privkey);
-
-				return blankEvent;
+				return makeNostrEvent(privkey, kind, content, tags);
 			} else {
+				const blankEvent = {
+					kind,
+					content,
+					created_at: nostrNowBasic(),
+					tags,
+					pubkey
+				} as Event;
+
+				// blankEvent.id = getEventHash(blankEvent);
+
 				return window.nostr!.signEvent(blankEvent);
 			}
 		},

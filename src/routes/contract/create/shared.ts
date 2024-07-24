@@ -11,13 +11,11 @@ export interface NewContractData {
 }
 
 export async function getContactsInfo(pubkey: string) {
-	const events = await relayPool.list(relayList, [
-		{
-			authors: [pubkey],
-			kinds: [3],
-			until: nostrNowBasic()
-		}
-	]);
+	const events = await relayPool.querySync(relayList, {
+		authors: [pubkey],
+		kinds: [3],
+		until: nostrNowBasic()
+	});
 
 	if (!events) return;
 

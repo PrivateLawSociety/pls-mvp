@@ -7,13 +7,11 @@ export interface Person {
 }
 
 async function getPerson(pubkey: string) {
-	const events = await relayPool.batchedList('getPerson', relayList, [
-		{
-			authors: [pubkey],
-			kinds: [0],
-			until: nostrNowBasic()
-		}
-	]);
+	const events = await relayPool.querySync(relayList, {
+		authors: [pubkey],
+		kinds: [0],
+		until: nostrNowBasic()
+	});
 
 	if (events.length === 0) return null;
 

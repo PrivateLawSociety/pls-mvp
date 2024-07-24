@@ -3,22 +3,37 @@
 	import { nostrAuth } from '$lib/nostr';
 	import type { ECPairInterface } from 'ecpair';
 	import { Button, Input, Label, P } from 'flowbite-svelte';
+	import { nip19 } from 'nostr-tools';
 
-	let wifKey = $nostrAuth?.privkey ?? '';
+	let secretKey = $nostrAuth?.privkey ?? '';
 	let ecpair: ECPairInterface | null = null;
 
 	$: privateKey = ecpair?.privateKey!.toString('hex')!;
 
+	// TODO: do this better
 	$: {
 		try {
-			ecpair = ECPair.fromWIF(wifKey, NETWORK.network);
+			ecpair = ECPair.fromWIF(secretKey, NETWORK.network);
 			nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
 		} catch (error) {
 			try {
-				ecpair = ECPair.fromPrivateKey(Buffer.from(wifKey, 'hex'), { network: NETWORK.network });
+				ecpair = ECPair.fromPrivateKey(Buffer.from(secretKey, 'hex'), { network: NETWORK.network });
 				nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
 			} catch (error) {
-				ecpair = null;
+				try {
+					let nsec = nip19.decode(secretKey);
+
+					if (nsec.type == 'nsec') {
+						ecpair = ECPair.fromPrivateKey(Buffer.from(nsec.data), {
+							network: NETWORK.network
+						});
+						nostrAuth.loginWithPrivkey(ecpair.privateKey!.toString('hex'));
+					} else {
+						ecpair = null;
+					}
+				} catch (error) {
+					ecpair = null;
+				}
 			}
 		}
 	}
@@ -32,7 +47,7 @@
 	<div class="flex justify-center w-full flex-col items-center h-full gap-4">
 		<div>
 			<Label class="mb-2">Secret key</Label>
-			<Input type="text" bind:value={wifKey} />
+			<Input type="text" bind:value={secretKey} />
 		</div>
 	</div>
 	<a href="/">

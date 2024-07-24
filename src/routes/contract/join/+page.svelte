@@ -37,70 +37,78 @@
 		if (await nostrAuth.tryLogin()) {
 			if (!$nostrAuth?.pubkey) return;
 
-			relayPool
-				.sub(relayList, [
+			relayPool.subscribeMany(
+				relayList,
+				[
 					{
 						kinds: [ContractRequestEvent],
 						'#p': [$nostrAuth.pubkey]
 					}
-				])
-				.on('event', async (e) => {
-					const data = JSON.parse(
-						await nostrAuth.decryptDM(e.pubkey, e.content)
-					) as ContractRequestPayload;
+				],
+				{
+					async onevent(e) {
+						const data = JSON.parse(
+							await nostrAuth.decryptDM(e.pubkey, e.content)
+						) as ContractRequestPayload;
 
-					contractsData[data.fileHash] = {
-						collateral: {
-							arbitratorsQuorum: data.arbitratorsQuorum,
-							multisigAddress: getMultisigAddress({
-								arbitrators: data.arbitratorPubkeys,
+						contractsData[data.fileHash] = {
+							collateral: {
 								arbitratorsQuorum: data.arbitratorsQuorum,
-								clients: data.clientPubkeys
-							}),
-							network: NETWORK.name,
-							// TODO TODO TODO
-							privateBlindingKey:
-								'0000000000000000000000000000000000000000000000000000000000000001',
-							pubkeys: {
-								clients: data.clientPubkeys,
-								arbitrators: data.arbitratorPubkeys
+								multisigAddress: getMultisigAddress({
+									arbitrators: data.arbitratorPubkeys,
+									arbitratorsQuorum: data.arbitratorsQuorum,
+									clients: data.clientPubkeys
+								}),
+								network: NETWORK.name,
+								// TODO TODO TODO
+								privateBlindingKey:
+									'0000000000000000000000000000000000000000000000000000000000000001',
+								pubkeys: {
+									clients: data.clientPubkeys,
+									arbitrators: data.arbitratorPubkeys
+								},
+								type: 'taproot-v0'
 							},
-							type: 'taproot-v0'
-						},
-						communication: {
-							identifiers: {
-								clients: data.clientPubkeys,
-								arbitrators: data.arbitratorPubkeys
+							communication: {
+								identifiers: {
+									clients: data.clientPubkeys,
+									arbitrators: data.arbitratorPubkeys
+								},
+								type: 'nostr'
 							},
-							type: 'nostr'
-						},
-						document: {
-							pubkeys: {
-								clients: data.clientPubkeys,
-								arbitrators: data.arbitratorPubkeys
+							document: {
+								pubkeys: {
+									clients: data.clientPubkeys,
+									arbitrators: data.arbitratorPubkeys
+								},
+								fileHash: data.fileHash
 							},
-							fileHash: data.fileHash
-						},
-						version: 0
-					};
-				});
+							version: 0
+						};
+					}
+				}
+			);
 
-			relayPool
-				.sub(relayList, [
+			relayPool.subscribeMany(
+				relayList,
+				[
 					{
 						kinds: [ContractApprovalEvent],
 						'#p': [$nostrAuth.pubkey]
 					}
-				])
-				.on('event', async (e) => {
-					const { signature, fileHash } = JSON.parse(
-						await nostrAuth.decryptDM(e.pubkey, e.content)
-					) as ContractApprovalPayload;
+				],
+				{
+					async onevent(e) {
+						const { signature, fileHash } = JSON.parse(
+							await nostrAuth.decryptDM(e.pubkey, e.content)
+						) as ContractApprovalPayload;
 
-					if (!contractSignatures[fileHash]) contractSignatures[fileHash] = {};
+						if (!contractSignatures[fileHash]) contractSignatures[fileHash] = {};
 
-					contractSignatures[fileHash][e.pubkey] = signature;
-				});
+						contractSignatures[fileHash][e.pubkey] = signature;
+					}
+				}
+			);
 		}
 	});
 
