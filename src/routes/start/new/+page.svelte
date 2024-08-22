@@ -16,7 +16,7 @@
 	let ecpair: ECPairInterface | null = null;
 
 	$: privateKey = ecpair?.privateKey?.toString('hex')!;
-	$: publicId = ecpair?.publicKey.toString('hex');
+	$: publicId = ecpair?.publicKey.toString('hex').slice(-64);
 
 	let copiedPubkey = false;
 	let copiedSeckey = false;
@@ -40,13 +40,13 @@
 
 		<div class="flex justify-center w-full flex-col items-center h-full gap-4">
 			<div>
-				<Label for="first_name" class="mb-2">Public ID</Label>
+				<Label class="mb-2">Public ID</Label>
 				<Input
 					type="text"
 					readonly
 					value={publicId}
 					on:click={async () => {
-						await navigator.clipboard.writeText(wifKey);
+						await navigator.clipboard.writeText(publicId ?? '');
 
 						copiedPubkey = true;
 						setTimeout(() => (copiedPubkey = false), 3000);
@@ -59,7 +59,7 @@
 			>
 
 			<div>
-				<Label for="first_name" class="mb-2">Secret key</Label>
+				<Label class="mb-2">Secret key</Label>
 				<Input
 					class="cursor-pointer"
 					type="text"

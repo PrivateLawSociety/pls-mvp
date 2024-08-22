@@ -180,8 +180,12 @@
 			? createLiquidMultisig(clients, arbitrators, arbitratorsQuorum, NETWORK.network)
 					.confidentialAddress
 			: createBitcoinMultisig(
-					clients.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
-					arbitrators.map((pubkey) => ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'))),
+					clients.map((pubkey) =>
+						ECPair.fromPublicKey(Buffer.from('02' + pubkey.slice(-64), 'hex'))
+					),
+					arbitrators.map((pubkey) =>
+						ECPair.fromPublicKey(Buffer.from('02' + pubkey.slice(-64), 'hex'))
+					),
 					arbitratorsQuorum,
 					NETWORK.network
 			  ).multisig.address!;

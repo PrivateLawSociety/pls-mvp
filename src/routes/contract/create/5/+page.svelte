@@ -24,12 +24,12 @@
 
 		if (!documentHash) return alert('Please select a file')!;
 
-		const pubkeys = [clients[0], clients[1], ...arbitrators];
+		const pubkeys = [clients[0], clients[1], ...arbitrators].map((pub) => pub.slice(-64));
 
 		const payload = {
-			arbitratorPubkeys: arbitrators.map((p) => p),
+			arbitratorPubkeys: arbitrators.map((pub) => pub.slice(-64)),
 			arbitratorsQuorum,
-			clientPubkeys: [clients[0], clients[1]],
+			clientPubkeys: [clients[0], clients[1]].map((pub) => pub.slice(-64)),
 			fileHash: documentHash,
 			network
 		} satisfies ContractRequestPayload;
