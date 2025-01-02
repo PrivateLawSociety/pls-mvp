@@ -8,25 +8,15 @@ export const ECPair = ECPairFactory(ecc);
 
 bitcoin.initEccLib(ecc);
 
-export function getNetworkName() {
-	const network = sessionStorage.getItem('network');
+export const networkNames = ['bitcoin', 'bitcoin_testnet', 'liquid', 'liquid_testnet'] as const;
 
-	if (!network) {
-		return 'bitcoin_testnet';
-	} else if (
-		network === 'bitcoin' ||
-		network === 'bitcoin_testnet' ||
-		network === 'liquid' ||
-		network === 'liquid_testnet'
-	) {
-		return network;
-	} else {
-		alert('Inexistent network name, contact the developers');
-		throw new Error('Inexistent network name');
-	}
+export type NetworkNames = (typeof networkNames)[number];
+
+export function isValidNetworkName(name: string): name is NetworkNames {
+	return networkNames.includes(name as NetworkNames);
 }
 
-export function getNetworkData(): { isTestnet: boolean } & (
+export function getNetworkByName(networkName: NetworkNames): { isTestnet: boolean } & (
 	| {
 			isLiquid: false;
 			network: bitcoin.networks.Network;
@@ -38,8 +28,6 @@ export function getNetworkData(): { isTestnet: boolean } & (
 			name: 'liquid' | 'liquid_testnet';
 	  }
 ) {
-	const networkName = getNetworkName();
-
 	if (networkName === 'bitcoin')
 		return {
 			isLiquid: false,
@@ -71,5 +59,3 @@ export function getNetworkData(): { isTestnet: boolean } & (
 
 	throw new Error('It should be impossible to get here');
 }
-
-export const NETWORK = getNetworkData();

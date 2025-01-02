@@ -7,6 +7,7 @@
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { goto } from '$app/navigation';
 	import { ContractRequestEvent, type ContractRequestPayload } from '../../shared';
+	import { isValidNetworkName } from '$lib/bitcoin';
 
 	let newContract = getContext<Writable<NewContractData>>('contract');
 
@@ -25,6 +26,8 @@
 		if (!documentHash) return alert('Please select a file')!;
 
 		const pubkeys = [clients[0], clients[1], ...arbitrators].map((pub) => pub.slice(-64));
+
+		if (!isValidNetworkName(network)) return alert('Invalid network');
 
 		const payload = {
 			arbitratorPubkeys: arbitrators.map((pub) => pub.slice(-64)),

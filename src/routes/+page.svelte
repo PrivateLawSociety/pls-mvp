@@ -24,9 +24,9 @@
 				<Button class="w-48 md:w-64">Verify</Button>
 			</a>
 
-			<a href="/settings" class="w-full md:w-auto">
+			<!-- <a href="/settings" class="w-full md:w-auto">
 				<Button class="w-48 md:w-64">Settings</Button>
-			</a>
+			</a> -->
 		</div>
 	</div>
 {:else}

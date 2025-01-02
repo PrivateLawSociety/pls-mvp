@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { ECPair, NETWORK } from '$lib/bitcoin';
 	import { nostrAuth } from '$lib/nostr';
-	import type { ECPairInterface } from 'ecpair';
 	import { Button, Checkbox, Input, Label, P, Toast } from 'flowbite-svelte';
 	import { slide } from 'svelte/transition';
+	import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 
 	let agreed1 = false;
 	let agreed2 = false;
@@ -12,24 +11,15 @@
 
 	let hasStoredKeys = false;
 
-	let wifKey = $nostrAuth?.privkey ?? '';
-	let ecpair: ECPairInterface | null = null;
+	let privateKey = generateSecretKey();
+	let privateKeyStr = Buffer.from(privateKey).toString('hex');
 
-	$: privateKey = ecpair?.privateKey?.toString('hex')!;
-	$: publicId = ecpair?.publicKey.toString('hex').slice(-64);
+	$: nsec = nip19.nsecEncode(privateKey);
+	$: publicId = getPublicKey(privateKey);
+	$: npub = nip19.npubEncode(publicId);
 
 	let copiedPubkey = false;
 	let copiedSeckey = false;
-
-	function handleGenerateKeypair() {
-		ecpair = ECPair.makeRandom({
-			network: NETWORK.network
-		});
-
-		wifKey = ecpair.toWIF();
-	}
-
-	handleGenerateKeypair();
 </script>
 
 {#if fullyAgreed}
@@ -44,9 +34,9 @@
 				<Input
 					type="text"
 					readonly
-					value={publicId}
+					value={npub}
 					on:click={async () => {
-						await navigator.clipboard.writeText(publicId ?? '');
+						await navigator.clipboard.writeText(npub ?? '');
 
 						copiedPubkey = true;
 						setTimeout(() => (copiedPubkey = false), 3000);
@@ -65,12 +55,12 @@
 					type="text"
 					readonly
 					on:click={async () => {
-						await navigator.clipboard.writeText(wifKey);
+						await navigator.clipboard.writeText(nsec);
 
 						copiedSeckey = true;
 						setTimeout(() => (copiedSeckey = false), 3000);
 					}}
-					value={wifKey}
+					value={nsec}
 				/>
 			</div>
 
@@ -82,7 +72,7 @@
 			>I've stored my secret key in a safe and private place</Checkbox
 		>
 		<a href="/">
-			<Button disabled={!hasStoredKeys} on:click={() => nostrAuth.loginWithPrivkey(privateKey)}
+			<Button disabled={!hasStoredKeys} on:click={() => nostrAuth.loginWithPrivkey(privateKeyStr)}
 				>Continue</Button
 			>
 		</a>

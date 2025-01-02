@@ -1,5 +1,4 @@
 import { goto } from '$app/navigation';
-import { NETWORK } from '$lib/bitcoin';
 import type { ECPairInterface } from 'ecpair';
 import { hashFromJSON } from 'pls-core';
 
@@ -14,16 +13,8 @@ export function tryParseFinishedContract(stringifiedContract: string) {
 	try {
 		const json = JSON.parse(stringifiedContract);
 		const parsed = contractSchema.safeParse(json);
-	
+
 		if (parsed.success) {
-			if (NETWORK.name !== parsed.data.collateral.network) {
-				alert(
-					`This contract is on the ${parsed.data.collateral.network} network, please switch to it`
-				);
-				goto('/');
-				return null;
-			}
-	
 			return parsed.data;
 		} else {
 			alert('Error validating contract');
@@ -31,7 +22,7 @@ export function tryParseFinishedContract(stringifiedContract: string) {
 			return null;
 		}
 	} catch {
-		return null
+		return null;
 	}
 }
 

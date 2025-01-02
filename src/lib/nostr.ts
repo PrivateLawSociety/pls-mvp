@@ -1,5 +1,4 @@
 import {
-	getEventHash,
 	getPublicKey,
 	SimplePool,
 	type Event,
@@ -8,7 +7,8 @@ import {
 	finalizeEvent
 } from 'nostr-tools';
 import { get, writable } from 'svelte/store';
-import { ECPair, NETWORK } from './bitcoin';
+import { ECPair, getNetworkByName, type NetworkNames } from './bitcoin';
+import { Buffer } from 'buffer';
 
 export const relayPool = new SimplePool();
 
@@ -35,7 +35,7 @@ export async function makeNostrEvent(
 			kind,
 			tags
 		},
-		Buffer.from(privkey, 'hex')
+		Uint8Array.from(Buffer.from(privkey, 'hex'))
 	);
 }
 
@@ -168,12 +168,12 @@ public key: ${pubkey}`
 				return window.nostr!.signEvent(blankEvent);
 			}
 		},
-		getSigner() {
+		getSigner(networkName: NetworkNames) {
 			const { pubkey, privkey } = get(store)!;
 
 			if (privkey) {
 				const ecpair = ECPair.fromPrivateKey(Buffer.from(privkey, 'hex'), {
-					network: NETWORK.network
+					network: getNetworkByName(networkName).network
 				});
 
 				return ecpair;

@@ -6,8 +6,7 @@
 	import { broadcastToNostr, nostrAuth, relayList, relayPool } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { formatDateTime, hashFromFile } from '$lib/utils';
-	import { publishTransaction } from '$lib/mempool';
-	import { NETWORK } from '$lib/bitcoin';
+	import { createMempoolApi } from '$lib/mempool';
 	import { contractDataFileStore } from '$lib/stores';
 	import FileDrop from '$lib/components/FileDrop.svelte';
 	import { Pset, address, bip341 } from 'liquidjs-lib';
@@ -20,6 +19,7 @@
 	import type { Contract } from 'pls-full';
 	import DropDocument from '$lib/components/DropDocument.svelte';
 	import { tryParseFinishedContract } from '$lib/pls/contract';
+	import { getNetworkByName } from '$lib/bitcoin';
 
 	let psbtsMetadataStringified = '';
 
@@ -32,6 +32,9 @@
 	let contractFile: File | null;
 	let psbtFiles: FileList | null;
 
+	$: network = contractData ? getNetworkByName(contractData.collateral.network) : null;
+	$: mempool = network ? createMempoolApi(network) : null;
+
 	$: {
 		const file = psbtFiles?.item(0);
 
@@ -40,7 +43,7 @@
 
 	$: if (contractData) onContractSelected();
 
-	$: userShownData = getUserShownData(psbtsMetadata);
+	$: userShownData = getUserShownData();
 
 	$: if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
 
@@ -48,13 +51,14 @@
 		contractData = tryParseFinishedContract(await file.text());
 	}
 
-	function getUserShownData(_: any) {
-		if (!psbtsMetadata) return null;
+	function getUserShownData() {
+		if (!psbtsMetadata || !contractData) return null;
 
-		if (NETWORK.isLiquid) {
+		// TODO: checck if this works
+		const { isLiquid, network } = getNetworkByName(contractData.collateral.network);
+
+		if (isLiquid) {
 			const pset = Pset.fromBuffer(Buffer.from(psbtsMetadata[0].psbtHex, 'hex'));
-
-			const network = NETWORK.network;
 
 			return {
 				outputs: pset.outputs
@@ -70,7 +74,7 @@
 				locktime: pset.locktime()
 			};
 		} else {
-			const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: NETWORK.network });
+			const psbt = Psbt.fromHex(psbtsMetadata[0].psbtHex, { network: network });
 
 			return {
 				outputs: psbt.txOutputs,
@@ -123,8 +127,11 @@
 	// for security reasons, check if all PSBTs are equivalent before signing
 	function areAllPsbtsEquivalent(psbtsMetadata: PsbtMetadata[]) {
 		if (psbtsMetadata.length === 1) return true;
+		if (contractData === null) return false;
 
-		if (NETWORK.isLiquid) {
+		const { isLiquid } = getNetworkByName(contractData.collateral.network);
+
+		if (isLiquid) {
 			const firstPsetMetadata = psbtsMetadata[0];
 			const firstPset = Pset.fromBuffer(Buffer.from(firstPsetMetadata.psbtHex, 'hex'));
 
@@ -159,23 +166,29 @@
 
 		if (!pubkey) return;
 
-		const signer = nostrAuth.getSigner();
+		const {
+			isLiquid,
+			network,
+			name: networkName
+		} = getNetworkByName(contractData?.collateral.network);
+
+		const signer = nostrAuth.getSigner(networkName);
 
 		if (!signer) return;
 
-		if (NETWORK.isLiquid) {
+		if (isLiquid) {
 			const { multisigScripts } = createLiquidMultisig(
 				contractData.collateral.pubkeys.clients,
 				contractData.collateral.pubkeys.arbitrators,
 				contractData.collateral.arbitratorsQuorum,
-				NETWORK.network
+				network
 			);
 
 			generatedPSBTsMetadata = await Promise.all(
 				psbtsMetadata
 					.filter(({ pubkeys }) => pubkeys.includes(pubkey))
 					.map(async (metadata) => {
-						if (!NETWORK.isLiquid) throw new Error('Network is not liquid');
+						if (!isLiquid) throw new Error('Network is not liquid');
 
 						const redeemOutput = multisigScripts
 							.find(({ combination }) =>
@@ -191,7 +204,7 @@
 							scriptHex: redeemOutput
 						});
 
-						await signTaprootTransaction(pset, signer, leafHash, NETWORK.network);
+						await signTaprootTransaction(pset, signer, leafHash, network);
 
 						return {
 							...metadata,
@@ -226,7 +239,7 @@
 				psbtsMetadata
 					.filter(({ pubkeys }) => pubkeys.includes('02' + pubkey))
 					.map(async (metadata) => {
-						const psbt = Psbt.fromHex(metadata.psbtHex, { network: NETWORK.network });
+						const psbt = Psbt.fromHex(metadata.psbtHex, { network: network });
 
 						await psbt.signAllInputsAsync(signer);
 
@@ -239,7 +252,7 @@
 
 			// There's only one spending possibility left, so the tx can be finished
 			if (generatedPSBTsMetadata.length === 1) {
-				const psbt = Psbt.fromHex(generatedPSBTsMetadata[0].psbtHex, { network: NETWORK.network });
+				const psbt = Psbt.fromHex(generatedPSBTsMetadata[0].psbtHex, { network: network });
 
 				psbt.finalizeAllInputs();
 
@@ -267,9 +280,9 @@
 	}
 
 	async function publish() {
-		if (!generatedTransactionHex) return;
+		if (!generatedTransactionHex || !mempool) return;
 
-		publishTransaction(generatedTransactionHex);
+		mempool.publishTransaction(generatedTransactionHex);
 	}
 
 	async function sendViaNostr() {

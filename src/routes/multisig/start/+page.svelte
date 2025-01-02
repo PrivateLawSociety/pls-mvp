@@ -8,13 +8,8 @@
 	import { broadcastToNostr, nostrAuth } from '$lib/nostr';
 	import { onMount } from 'svelte';
 	import { hashFromFile } from '$lib/utils';
-	import {
-		getAddressUnconfirmedTxs,
-		getAddressUtxos,
-		getTransactionHexFromId,
-		type UTXO
-	} from '$lib/mempool';
-	import { ECPair, NETWORK } from '$lib/bitcoin';
+	import { createMempoolApi, type UTXO } from '$lib/mempool';
+	import { ECPair, getNetworkByName } from '$lib/bitcoin';
 	import { contractDataFileStore } from '$lib/stores';
 	import {
 		createLiquidMultisig,
@@ -43,6 +38,9 @@
 	let timelockDays: number | undefined = undefined;
 
 	let replacingByFee = false;
+
+	$: network = contractData ? getNetworkByName(contractData.collateral.network) : null;
+	$: mempool = network ? createMempoolApi(network) : null;
 
 	$: if ($contractDataFileStore) onContractDataFileSelected($contractDataFileStore);
 
@@ -76,12 +74,14 @@
 	}
 
 	async function onContractSelected() {
-		if (!contractData) return;
+		if (!contractData || !mempool) return;
 
-		utxos = await getAddressUtxos(contractData.collateral.multisigAddress);
+		utxos = await mempool.getAddressUtxos(contractData.collateral.multisigAddress);
 
-		if (NETWORK.isLiquid && utxos) {
-			const txHexes = await Promise.all(utxos.map((utxo) => getTransactionHexFromId(utxo.txid)));
+		if (getNetworkByName(contractData.collateral.network).isLiquid && utxos) {
+			const txHexes = await Promise.all(
+				utxos.map((utxo) => mempool.getTransactionHexFromId(utxo.txid))
+			);
 
 			utxos = utxos.reduce((acc, utxo, i) => {
 				const hex = txHexes[i];
@@ -106,7 +106,7 @@
 				return acc;
 			}, [] as (UTXO & { hex: string; value: number })[]);
 		} else {
-			const unconfirmedTxs = await getAddressUnconfirmedTxs(
+			const unconfirmedTxs = await mempool.getAddressUnconfirmedTxs(
 				contractData.collateral.multisigAddress
 			);
 
@@ -136,18 +136,20 @@
 	async function handleStartSpend() {
 		if (!contractData || !utxos) return alert("UTXOs haven't loaded yet");
 
-		const signer = nostrAuth.getSigner();
+		const signer = nostrAuth.getSigner(contractData.collateral.network);
 
 		if (!signer) return;
 
 		const pubkey = $nostrAuth?.pubkey;
 
-		if (NETWORK.isLiquid) {
+		const { network, isLiquid } = getNetworkByName(contractData.collateral.network);
+
+		if (isLiquid) {
 			const { hashTree, multisigScripts } = createLiquidMultisig(
 				contractData.collateral.pubkeys.clients,
 				contractData.collateral.pubkeys.arbitrators,
 				contractData.collateral.arbitratorsQuorum,
-				NETWORK.network
+				network
 			);
 
 			// const unixNow = Math.floor(Date.now() / 1000);
@@ -169,7 +171,7 @@
 						...utxo,
 						hex: utxo.hex!
 					})),
-					NETWORK.network,
+					network,
 					signer,
 					addresses.filter(({ address }) => address.trim() !== '')
 					// timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
@@ -188,13 +190,13 @@
 		} else {
 			const { multisig, multisigScripts } = createBitcoinMultisig(
 				contractData.collateral.pubkeys.clients.map((pubkey) =>
-					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK.network })
+					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: network })
 				),
 				contractData.collateral.pubkeys.arbitrators.map((pubkey) =>
-					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: NETWORK.network })
+					ECPair.fromPublicKey(Buffer.from('02' + pubkey, 'hex'), { network: network })
 				),
 				contractData.collateral.arbitratorsQuorum,
-				NETWORK.network
+				network
 			);
 
 			const possibleScripts = multisigScripts.filter(({ combination }) =>
@@ -213,7 +215,7 @@
 					multisig,
 					redeemOutput,
 					signer,
-					NETWORK.network,
+					network,
 					addresses.filter(({ address }) => address.trim() !== ''),
 					utxos,
 					timelockDays ? unixNow + oneDayInSeconds * timelockDays : undefined
@@ -282,7 +284,7 @@
 			</div>
 
 			<!-- I should implement this for liquid later -->
-			{#if !NETWORK.isLiquid}
+			{#if !getNetworkByName(contractData.collateral.network).isLiquid}
 				{#if timelockDays === undefined}
 					<Button on:click={() => (timelockDays = 90)}>Add timelock</Button>
 				{:else}

@@ -1,10 +1,12 @@
+import { type NetworkNames } from '$lib/bitcoin';
+
 // maker ---> takers
 export interface ContractRequestPayload {
 	arbitratorPubkeys: string[];
 	arbitratorsQuorum: number;
 	clientPubkeys: string[];
 	fileHash: string;
-	network: string;
+	network: NetworkNames;
 }
 
 // // taker ---> maker + other takers

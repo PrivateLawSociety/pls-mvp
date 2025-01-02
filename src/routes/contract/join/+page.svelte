@@ -15,7 +15,7 @@
 	import Person from '$lib/components/Person.svelte';
 	import { downloadBlob, hashFromFile } from '$lib/utils';
 	import { createBitcoinMultisig } from 'pls-bitcoin';
-	import { ECPair, NETWORK } from '$lib/bitcoin';
+	import { ECPair, getNetworkByName, type NetworkNames } from '$lib/bitcoin';
 	import { createLiquidMultisig } from 'pls-liquid';
 	import DropDocument from '$lib/components/DropDocument.svelte';
 
@@ -57,9 +57,10 @@
 								multisigAddress: getMultisigAddress({
 									arbitrators: data.arbitratorPubkeys,
 									arbitratorsQuorum: data.arbitratorsQuorum,
-									clients: data.clientPubkeys
+									clients: data.clientPubkeys,
+									network: data.network
 								}),
-								network: NETWORK.name,
+								network: data.network,
 								// TODO TODO TODO
 								privateBlindingKey:
 									'0000000000000000000000000000000000000000000000000000000000000001',
@@ -117,7 +118,7 @@
 
 		const dataToSign = contractsData[fileHash];
 
-		const signer = nostrAuth.getSigner();
+		const signer = nostrAuth.getSigner(dataToSign.collateral.network);
 
 		if (!signer) return;
 
@@ -170,15 +171,18 @@
 	function getMultisigAddress({
 		arbitratorsQuorum,
 		arbitrators,
-		clients
+		clients,
+		network: networkName
 	}: {
 		arbitratorsQuorum: number;
 		arbitrators: string[];
 		clients: string[];
+		network: NetworkNames;
 	}) {
-		return NETWORK.isLiquid
-			? createLiquidMultisig(clients, arbitrators, arbitratorsQuorum, NETWORK.network)
-					.confidentialAddress
+		const { isLiquid, network } = getNetworkByName(networkName);
+
+		return isLiquid
+			? createLiquidMultisig(clients, arbitrators, arbitratorsQuorum, network).confidentialAddress
 			: createBitcoinMultisig(
 					clients.map((pubkey) =>
 						ECPair.fromPublicKey(Buffer.from('02' + pubkey.slice(-64), 'hex'))
@@ -187,7 +191,7 @@
 						ECPair.fromPublicKey(Buffer.from('02' + pubkey.slice(-64), 'hex'))
 					),
 					arbitratorsQuorum,
-					NETWORK.network
+					network
 			  ).multisig.address!;
 	}
 
@@ -242,6 +246,7 @@
 				{/key}
 			</div>
 			<p>{data.collateral.arbitratorsQuorum} arbitrators need to agree</p>
+			<p>Network: {data.collateral.network}</p>
 
 			<DropDocument bind:file={documentFile} />
 

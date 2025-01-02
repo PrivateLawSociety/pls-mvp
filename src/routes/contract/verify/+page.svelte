@@ -84,6 +84,8 @@
 			{quorum == 1 ? 'arbitrator' : 'arbitrators'} constitute{quorum == 1 ? 's' : ''} a decision
 		</p>
 
+		<p>Network: {contractData.collateral.network}</p>
+
 		{@const valid = contractData.document.fileHash === documentHash}
 		{#if !documentHash || !valid}
 			<DropDocument bind:file={documentFile} />
